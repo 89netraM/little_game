@@ -14,6 +14,7 @@ const SIZE: f32 = GAME_SIZE as f32 / 40.0;
 const HALF_SIZE: f32 = SIZE / 2.0;
 const QUARTER_SIZE: f32 = HALF_SIZE / 2.0;
 const RING_SIZE_SQUARED: f32 = RING_SIZE * RING_SIZE;
+const FAR_EDGE: f32 = GAME_SIZE as f32 - HALF_SIZE;
 
 pub struct Player {
 	pos: Vector2D<f32, UnknownUnit>,
@@ -45,6 +46,23 @@ impl Player {
 
 		if self.velocity != Vector2D::zero() {
 			self.pos += self.velocity.normalize() * SPEED * delta_time.as_secs_f32();
+		}
+
+		if self.pos.x < HALF_SIZE {
+			self.pos.x = HALF_SIZE;
+			self.velocity.x = -self.velocity.x;
+		}
+		if self.pos.y < HALF_SIZE {
+			self.pos.y = HALF_SIZE;
+			self.velocity.y = -self.velocity.y;
+		}
+		if self.pos.x > FAR_EDGE {
+			self.pos.x = FAR_EDGE;
+			self.velocity.x = -self.velocity.x;
+		}
+		if self.pos.y > FAR_EDGE {
+			self.pos.y = FAR_EDGE;
+			self.velocity.y = -self.velocity.y;
 		}
 	}
 
