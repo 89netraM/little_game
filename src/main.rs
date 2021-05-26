@@ -8,7 +8,7 @@ use std::{
 use minifb::{Window, WindowOptions};
 use raqote::{DrawTarget, SolidSource};
 
-use self::game_objects::{Action, GameObject, Player, Ring};
+use self::game_objects::{Action, EnemySpawner, GameObject, Player, Ring};
 
 const TITLE: &str = "Little Game";
 pub const GAME_SIZE: usize = 800;
@@ -31,8 +31,11 @@ fn game() -> Result<(), String> {
 	let start = Instant::now();
 	let mut previous = Instant::now();
 
-	let mut game_objects: Vec<Box<dyn GameObject>> =
-		vec![Box::new(Ring::default()), Box::new(Player::default())];
+	let mut game_objects: Vec<Box<dyn GameObject>> = vec![
+		Box::new(Ring::default()),
+		Box::new(Player::default()),
+		Box::new(EnemySpawner::default()),
+	];
 
 	while window.is_open() {
 		dt.clear(SolidSource::from_unpremultiplied_argb(

@@ -1,5 +1,4 @@
-use std::time::Instant;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use euclid::{Angle, Transform2D, UnknownUnit, Vector2D};
 use minifb::{Key, MouseButton, MouseMode, Window};
