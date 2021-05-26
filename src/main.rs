@@ -8,7 +8,7 @@ use std::{
 use minifb::{Window, WindowOptions};
 use raqote::{DrawTarget, SolidSource};
 
-use self::game_objects::{GameObject, Player, Ring};
+use self::game_objects::{Action, GameObject, Player, Ring};
 
 const TITLE: &str = "Little Game";
 pub const GAME_SIZE: usize = 800;
@@ -41,9 +41,31 @@ fn game() -> Result<(), String> {
 
 		let game_time = start.elapsed();
 		let delta_time = previous.elapsed();
+
+		let mut actions = Vec::new();
 		for game_object in &mut game_objects {
-			game_object.update(&window, &mut dt, &game_time, &delta_time)?;
+			match game_object.update(&window, &mut dt, &game_time, &delta_time)? {
+				Action::Continue() => {}
+				a => actions.push(a),
+			}
 		}
+		for action in actions {
+			match action {
+				Action::Add(to_adds) => {
+					for to_add in to_adds {
+						game_objects.push(to_add);
+					}
+				}
+				Action::Remove(to_removes) => {
+					game_objects = game_objects
+						.into_iter()
+						.filter(|o| !to_removes.contains(&o.id()))
+						.collect();
+				}
+				Action::Continue() => {}
+			}
+		}
+
 		previous = Instant::now();
 
 		window
