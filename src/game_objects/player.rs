@@ -87,13 +87,15 @@ impl Player {
 			&Transform2D::create_rotation(Angle::radians(self.rotation)).post_translate(self.pos),
 		);
 
+		let whiteness =
+			((1.0 - self.previous_bullet.elapsed().as_secs_f32() / BULLET_DELAY) * 127.0) as u8;
 		dt.fill_rect(
 			-HALF_SIZE,
 			-HALF_SIZE,
 			SIZE,
 			SIZE,
 			&Source::Solid(SolidSource::from_unpremultiplied_argb(
-				0xff, 0xff, 0x00, 0x00,
+				0xff, 0xff, whiteness, whiteness,
 			)),
 			&DrawOptions::default(),
 		);
