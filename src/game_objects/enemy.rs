@@ -41,13 +41,21 @@ impl GameObject for EnemySpawner {
 		None
 	}
 
-	fn update(&mut self, _: &GameInfo, _: &mut DrawTarget) -> Result<Vec<Action>, String> {
-		if self.last_enemy_spawn.elapsed().as_secs_f32() > ENEMY_SPAWN_INTERVAL {
+	fn update(&mut self, game_info: &GameInfo, _: &mut DrawTarget) -> Result<Vec<Action>, String> {
+		if self.last_enemy_spawn.elapsed().as_secs_f32()
+			> (ENEMY_SPAWN_INTERVAL
+				- ENEMY_SPAWN_INTERVAL * (game_info.game_time.as_secs_f32() / ENEMY_SPAWN_TIME))
+		{
 			self.last_enemy_spawn = Instant::now();
+			let target_rotation = rand::random::<f32>() * PI2;
+			let target = Vector2D::new(
+				HALF_GAME_SIZE + target_rotation.sin() * game_info.ring_radius * 0.25,
+				HALF_GAME_SIZE + target_rotation.cos() * game_info.ring_radius * 0.25,
+			);
 			let rotation = rand::random::<f32>() * PI2;
 			let heading = Vector2D::new(rotation.sin(), rotation.cos());
 			Ok(vec![Action::Add(Box::new(Enemy::new(
-				(CENTER - heading * HALF_GAME_SIZE).clamp(Vector2D::zero(), EDGE),
+				(target - heading * HALF_GAME_SIZE).clamp(Vector2D::zero(), EDGE),
 				heading,
 			)))])
 		} else {
