@@ -465,6 +465,7 @@ name = "little-game"
 version = "0.1.0"
 dependencies = [
  "euclid",
+ "font-kit",
  "minifb",
  "rand",
  "raqote",

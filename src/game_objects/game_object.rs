@@ -31,4 +31,5 @@ pub enum Action {
 	Add(Box<dyn GameObject>),
 	Remove(usize),
 	Shrink(),
+	Score(usize),
 }

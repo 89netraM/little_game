@@ -39,7 +39,11 @@ impl Bullet {
 			.iter()
 			.find(|b| b.id > 1 && (self.pos - b.pos).length() < b.radius + HALF_SIZE)
 		{
-			vec![Action::Remove(self.id), Action::Remove(body.id)]
+			vec![
+				Action::Remove(self.id),
+				Action::Remove(body.id),
+				Action::Score(1),
+			]
 		} else {
 			Vec::new()
 		}

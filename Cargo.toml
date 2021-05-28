@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 euclid = "0.20.0"
+font-kit = "0.5.0"
 minifb = "0.19.3"
 rand = "0.8.3"
 raqote = "0.7.14"

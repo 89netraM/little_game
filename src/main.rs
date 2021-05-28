@@ -6,8 +6,9 @@ use std::{
 	time::{Duration, Instant},
 };
 
+use font_kit::{family_name::FamilyName, properties::Properties, source::SystemSource};
 use minifb::{Window, WindowOptions};
-use raqote::{DrawTarget, SolidSource};
+use raqote::{DrawOptions, DrawTarget, Point, SolidSource, Source};
 
 use self::{
 	game_info::GameInfo,
@@ -27,6 +28,14 @@ fn main() {
 }
 
 fn game() -> Result<(), String> {
+	let font = SystemSource::new()
+		.select_best_match(&[FamilyName::Monospace], &Properties::new())
+		.map_err(|_| "Could not find font".to_string())?
+		.load()
+		.map_err(|_| "Could not load font".to_string())?;
+
+	let mut score = 0;
+
 	let mut ring = Ring::default();
 	let mut game_objects: Vec<Box<dyn GameObject>> = vec![
 		Box::new(Player::default()),
@@ -73,8 +82,20 @@ fn game() -> Result<(), String> {
 					}
 				}
 				Action::Shrink() => ring.shrink(),
+				Action::Score(s) => score += s,
 			}
 		}
+
+		dt.draw_text(
+			&font,
+			30.0,
+			&format!("Score: {}", score),
+			Point::new(0.0, 30.0),
+			&Source::Solid(SolidSource::from_unpremultiplied_argb(
+				0xff, 0x00, 0x00, 0x00,
+			)),
+			&DrawOptions::new(),
+		);
 
 		previous = Instant::now();
 
