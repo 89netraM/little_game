@@ -27,8 +27,8 @@ fn main() {
 }
 
 fn game() -> Result<(), String> {
+	let mut ring = Ring::default();
 	let mut game_objects: Vec<Box<dyn GameObject>> = vec![
-		Box::new(Ring::default()),
 		Box::new(Player::default()),
 		Box::new(EnemySpawner::default()),
 	];
@@ -36,6 +36,7 @@ fn game() -> Result<(), String> {
 		window: Window::new(TITLE, GAME_SIZE, GAME_SIZE, WindowOptions::default())
 			.map_err(|_| "Could not create a window.".to_string())?,
 		bodies: Vec::new(),
+		ring_radius: ring.radius(),
 		game_time: Duration::default(),
 		delta_time: Duration::default(),
 	};
@@ -54,9 +55,11 @@ fn game() -> Result<(), String> {
 		game_info
 			.bodies
 			.extend(game_objects.iter().filter_map(|o| o.body()));
+		game_info.ring_radius = ring.radius();
 		game_info.game_time = start.elapsed();
 		game_info.delta_time = previous.elapsed();
 
+		ring.update(&game_info, &mut dt)?;
 		let mut actions = Vec::new();
 		for game_object in &mut game_objects {
 			actions.extend(game_object.update(&game_info, &mut dt)?);
@@ -69,6 +72,7 @@ fn game() -> Result<(), String> {
 						game_objects.remove(i);
 					}
 				}
+				Action::Shrink() => ring.shrink(),
 			}
 		}
 

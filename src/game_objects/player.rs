@@ -4,14 +4,7 @@ use euclid::{Angle, Transform2D, UnknownUnit, Vector2D};
 use minifb::{Key, MouseButton, MouseMode};
 use raqote::{DrawOptions, DrawTarget, PathBuilder, SolidSource, Source};
 
-use super::{
-	game_object::get_new_object_id,
-	ring::RING_SIZE,
-	Action,
-	Bullet,
-	GameObject,
-	PhysicalBody,
-};
+use super::{game_object::get_new_object_id, Action, Bullet, GameObject, PhysicalBody};
 use crate::{game_info::GameInfo, GAME_SIZE};
 
 const SPEED: f32 = GAME_SIZE as f32 / 2.0;
@@ -20,7 +13,6 @@ const CENTER: Vector2D<f32, UnknownUnit> =
 const SIZE: f32 = GAME_SIZE as f32 / 40.0;
 const HALF_SIZE: f32 = SIZE / 2.0;
 const QUARTER_SIZE: f32 = HALF_SIZE / 2.0;
-const RING_SIZE_SQUARED: f32 = RING_SIZE * RING_SIZE;
 const FAR_EDGE: f32 = GAME_SIZE as f32 - HALF_SIZE;
 const BULLET_DELAY: f32 = 0.5;
 
@@ -35,7 +27,7 @@ pub struct Player {
 
 impl Player {
 	fn update(&mut self, game_info: &GameInfo) -> Vec<Action> {
-		if (CENTER - self.pos).square_length() < RING_SIZE_SQUARED {
+		if (CENTER - self.pos).square_length() < game_info.ring_radius * game_info.ring_radius {
 			if let Some(mouse_pos) = game_info.window.get_mouse_pos(MouseMode::Discard) {
 				self.rotation = (mouse_pos.0 - self.pos.x).atan2(mouse_pos.1 - self.pos.y);
 			}

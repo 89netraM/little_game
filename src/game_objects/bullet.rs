@@ -37,7 +37,7 @@ impl Bullet {
 		} else if let Some(body) = game_info
 			.bodies
 			.iter()
-			.find(|b| b.id > 2 && (self.pos - b.pos).length() < b.radius + HALF_SIZE)
+			.find(|b| b.id > 1 && (self.pos - b.pos).length() < b.radius + HALF_SIZE)
 		{
 			vec![Action::Remove(self.id), Action::Remove(body.id)]
 		} else {

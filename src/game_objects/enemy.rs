@@ -1,9 +1,9 @@
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use euclid::{Angle, Transform2D, UnknownUnit, Vector2D};
 use raqote::{DrawOptions, DrawTarget, PathBuilder, SolidSource, Source};
 
-use super::{game_object::get_new_object_id, ring::RING_SIZE, Action, GameObject, PhysicalBody};
+use super::{game_object::get_new_object_id, Action, GameObject, PhysicalBody};
 use crate::{game_info::GameInfo, GAME_SIZE};
 
 const ENEMY_SPAWN_INTERVAL: f32 = 1.0;
@@ -17,7 +17,6 @@ const SPEED: f32 = GAME_SIZE as f32 / 4.0;
 const SIZE: f32 = GAME_SIZE as f32 / 40.0;
 const HALF_SIZE: f32 = SIZE / 2.0;
 const QUARTER_SIZE: f32 = HALF_SIZE / 2.0;
-const RING_SIZE_SQUARED: f32 = RING_SIZE * RING_SIZE;
 
 pub struct EnemySpawner {
 	id: usize,
@@ -72,11 +71,11 @@ impl Enemy {
 		}
 	}
 
-	fn update(&mut self, delta_time: &Duration) -> Vec<Action> {
-		if (CENTER - self.pos).square_length() < RING_SIZE_SQUARED {
-			vec![Action::Remove(self.id())]
+	fn update(&mut self, game_info: &GameInfo) -> Vec<Action> {
+		if (CENTER - self.pos).square_length() < game_info.ring_radius * game_info.ring_radius {
+			vec![Action::Remove(self.id()), Action::Shrink()]
 		} else {
-			self.pos += self.heading * SPEED * delta_time.as_secs_f32();
+			self.pos += self.heading * SPEED * game_info.delta_time.as_secs_f32();
 			Vec::new()
 		}
 	}
@@ -128,7 +127,7 @@ impl GameObject for Enemy {
 	}
 
 	fn update(&mut self, game_info: &GameInfo, dt: &mut DrawTarget) -> Result<Vec<Action>, String> {
-		let action = self.update(&game_info.delta_time);
+		let action = self.update(&game_info);
 		self.draw(dt);
 		Ok(action)
 	}
