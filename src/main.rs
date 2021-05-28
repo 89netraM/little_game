@@ -7,7 +7,7 @@ use std::{
 };
 
 use font_kit::{family_name::FamilyName, properties::Properties, source::SystemSource};
-use minifb::{Window, WindowOptions};
+use minifb::{Key, MouseButton, Window, WindowOptions};
 use raqote::{DrawOptions, DrawTarget, Point, SolidSource, Source};
 
 use self::{
@@ -35,6 +35,8 @@ fn game() -> Result<(), String> {
 		.map_err(|_| "Could not load font".to_string())?;
 
 	let mut score = 0;
+	let mut have_clicked = false;
+	let mut have_moved = false;
 
 	let mut ring = Ring::default();
 	let mut game_objects: Vec<Box<dyn GameObject>> = vec![
@@ -101,6 +103,46 @@ fn game() -> Result<(), String> {
 			)),
 			&DrawOptions::new(),
 		);
+
+		let mut margin_bottom = 5.0;
+		if !have_moved {
+			if game_info.window.is_key_down(Key::W)
+			|| game_info.window.is_key_down(Key::A)
+			|| game_info.window.is_key_down(Key::S)
+			|| game_info.window.is_key_down(Key::D) {
+				have_moved = true;
+			}
+			else {
+				dt.draw_text(
+					&font,
+					20.0,
+					"WASD to move",
+					Point::new(0.0, GAME_SIZE - margin_bottom),
+					&Source::Solid(SolidSource::from_unpremultiplied_argb(
+						0xff, 0x00, 0x00, 0x00,
+					)),
+					&DrawOptions::new(),
+				);
+				margin_bottom += 20.0;
+			}
+		}
+		if !have_clicked {
+			if game_info.window.get_mouse_down(MouseButton::Left) {
+				have_clicked = true;
+			}
+			else {
+				dt.draw_text(
+					&font,
+					20.0,
+					"LMB to shoot",
+					Point::new(0.0, GAME_SIZE - margin_bottom),
+					&Source::Solid(SolidSource::from_unpremultiplied_argb(
+						0xff, 0x00, 0x00, 0x00,
+					)),
+					&DrawOptions::new(),
+				);
+			}
+		}
 
 		previous = Instant::now();
 
