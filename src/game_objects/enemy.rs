@@ -7,11 +7,11 @@ use super::{game_object::get_new_object_id, Action, GameObject, PhysicalBody};
 use crate::{game_info::GameInfo, GAME_SIZE};
 
 const ENEMY_SPAWN_INTERVAL: f32 = 1.0;
+const ENEMY_SPAWN_TIME: f32 = 180.0;
 const PI2: f32 = std::f32::consts::PI * 2.0;
-const GAME_SIZE_F32: f32 = GAME_SIZE as f32;
-const HALF_GAME_SIZE: f32 = GAME_SIZE_F32 as f32 / 2.0;
+const HALF_GAME_SIZE: f32 = GAME_SIZE / 2.0;
 const CENTER: Vector2D<f32, UnknownUnit> = Vector2D::new(HALF_GAME_SIZE, HALF_GAME_SIZE);
-const EDGE: Vector2D<f32, UnknownUnit> = Vector2D::new(GAME_SIZE_F32, GAME_SIZE_F32);
+const EDGE: Vector2D<f32, UnknownUnit> = Vector2D::new(GAME_SIZE, GAME_SIZE);
 
 const SPEED: f32 = GAME_SIZE as f32 / 4.0;
 const SIZE: f32 = GAME_SIZE as f32 / 40.0;

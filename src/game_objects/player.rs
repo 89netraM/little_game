@@ -7,13 +7,12 @@ use raqote::{DrawOptions, DrawTarget, PathBuilder, SolidSource, Source};
 use super::{game_object::get_new_object_id, Action, Bullet, GameObject, PhysicalBody};
 use crate::{game_info::GameInfo, GAME_SIZE};
 
-const SPEED: f32 = GAME_SIZE as f32 / 2.0;
-const CENTER: Vector2D<f32, UnknownUnit> =
-	Vector2D::new(GAME_SIZE as f32 / 2.0, GAME_SIZE as f32 / 2.0);
-const SIZE: f32 = GAME_SIZE as f32 / 40.0;
+const SPEED: f32 = GAME_SIZE / 2.0;
+const CENTER: Vector2D<f32, UnknownUnit> = Vector2D::new(GAME_SIZE / 2.0, GAME_SIZE / 2.0);
+const SIZE: f32 = GAME_SIZE / 40.0;
 const HALF_SIZE: f32 = SIZE / 2.0;
 const QUARTER_SIZE: f32 = HALF_SIZE / 2.0;
-const FAR_EDGE: f32 = GAME_SIZE as f32 - HALF_SIZE;
+const FAR_EDGE: f32 = GAME_SIZE - HALF_SIZE;
 const BULLET_DELAY: f32 = 0.5;
 
 pub struct Player {

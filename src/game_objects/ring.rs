@@ -3,10 +3,10 @@ use raqote::{DrawOptions, DrawTarget, PathBuilder, SolidSource, Source, StrokeSt
 use super::{game_object::get_new_object_id, Action, GameObject, PhysicalBody};
 use crate::{game_info::GameInfo, GAME_SIZE};
 
-const OFFSET: f32 = GAME_SIZE as f32 / 2.0;
+const OFFSET: f32 = GAME_SIZE / 2.0;
 const RING_SIZE: f32 = OFFSET / 2.0;
 const RING_SIZE_DECREASE: f32 = RING_SIZE * 0.01;
-const STROKE_WIDTH: f32 = GAME_SIZE as f32 / 200.0;
+const STROKE_WIDTH: f32 = GAME_SIZE / 200.0;
 const CIRCLE_ANGLE: f32 = std::f32::consts::PI * 2.0;
 
 pub struct Ring {

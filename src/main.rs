@@ -16,7 +16,7 @@ use self::{
 };
 
 const TITLE: &str = "Little Game";
-pub const GAME_SIZE: usize = 800;
+pub const GAME_SIZE: f32 = 800.0;
 
 fn main() {
 	if let Err(description) = game() {
@@ -42,8 +42,13 @@ fn game() -> Result<(), String> {
 		Box::new(EnemySpawner::default()),
 	];
 	let mut game_info = GameInfo {
-		window: Window::new(TITLE, GAME_SIZE, GAME_SIZE, WindowOptions::default())
-			.map_err(|_| "Could not create a window.".to_string())?,
+		window: Window::new(
+			TITLE,
+			GAME_SIZE as usize,
+			GAME_SIZE as usize,
+			WindowOptions::default(),
+		)
+		.map_err(|_| "Could not create a window.".to_string())?,
 		bodies: Vec::new(),
 		ring_radius: ring.radius(),
 		game_time: Duration::default(),

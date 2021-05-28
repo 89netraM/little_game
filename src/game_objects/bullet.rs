@@ -4,10 +4,10 @@ use raqote::{DrawOptions, DrawTarget, PathBuilder, SolidSource, Source};
 use super::{game_object::get_new_object_id, Action, GameObject, PhysicalBody};
 use crate::{game_info::GameInfo, GAME_SIZE};
 
-const SIZE: f32 = GAME_SIZE as f32 / 160.0;
+const SIZE: f32 = GAME_SIZE / 160.0;
 const HALF_SIZE: f32 = SIZE / 2.0;
-const FAR_EDGE: f32 = GAME_SIZE as f32 - HALF_SIZE;
-const SPEED: f32 = GAME_SIZE as f32 / 1.0;
+const FAR_EDGE: f32 = GAME_SIZE - HALF_SIZE;
+const SPEED: f32 = GAME_SIZE / 1.0;
 const CIRCLE_ANGLE: f32 = std::f32::consts::PI * 2.0;
 
 pub struct Bullet {
