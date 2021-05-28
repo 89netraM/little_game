@@ -25,7 +25,7 @@ impl GameObject for Ring {
 		None
 	}
 
-	fn update(&mut self, _: &GameInfo, dt: &mut DrawTarget) -> Result<Action, String> {
+	fn update(&mut self, _: &GameInfo, dt: &mut DrawTarget) -> Result<Vec<Action>, String> {
 		let mut pb = PathBuilder::new();
 		pb.arc(OFFSET, OFFSET, RING_SIZE, 0.0, CIRCLE_ANGLE);
 		dt.stroke(
@@ -40,6 +40,6 @@ impl GameObject for Ring {
 			&DrawOptions::default(),
 		);
 
-		Ok(Action::Continue())
+		Ok(Vec::new())
 	}
 }

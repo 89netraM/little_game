@@ -42,17 +42,17 @@ impl GameObject for EnemySpawner {
 		None
 	}
 
-	fn update(&mut self, _: &GameInfo, _: &mut DrawTarget) -> Result<Action, String> {
+	fn update(&mut self, _: &GameInfo, _: &mut DrawTarget) -> Result<Vec<Action>, String> {
 		if self.last_enemy_spawn.elapsed().as_secs_f32() > ENEMY_SPAWN_INTERVAL {
 			self.last_enemy_spawn = Instant::now();
 			let rotation = rand::random::<f32>() * PI2;
 			let heading = Vector2D::new(rotation.sin(), rotation.cos());
-			Ok(Action::Add(vec![Box::new(Enemy::new(
+			Ok(vec![Action::Add(Box::new(Enemy::new(
 				(CENTER - heading * HALF_GAME_SIZE).clamp(Vector2D::zero(), EDGE),
 				heading,
-			))]))
+			)))])
 		} else {
-			Ok(Action::Continue())
+			Ok(Vec::new())
 		}
 	}
 }
@@ -72,12 +72,12 @@ impl Enemy {
 		}
 	}
 
-	fn update(&mut self, delta_time: &Duration) -> Action {
+	fn update(&mut self, delta_time: &Duration) -> Vec<Action> {
 		if (CENTER - self.pos).square_length() < RING_SIZE_SQUARED {
-			Action::Remove(vec![self.id()])
+			vec![Action::Remove(self.id())]
 		} else {
 			self.pos += self.heading * SPEED * delta_time.as_secs_f32();
-			Action::Continue()
+			Vec::new()
 		}
 	}
 
@@ -127,7 +127,7 @@ impl GameObject for Enemy {
 		})
 	}
 
-	fn update(&mut self, game_info: &GameInfo, dt: &mut DrawTarget) -> Result<Action, String> {
+	fn update(&mut self, game_info: &GameInfo, dt: &mut DrawTarget) -> Result<Vec<Action>, String> {
 		let action = self.update(&game_info.delta_time);
 		self.draw(dt);
 		Ok(action)

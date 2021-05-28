@@ -59,25 +59,16 @@ fn game() -> Result<(), String> {
 
 		let mut actions = Vec::new();
 		for game_object in &mut game_objects {
-			match game_object.update(&game_info, &mut dt)? {
-				Action::Continue() => {}
-				a => actions.push(a),
-			}
+			actions.extend(game_object.update(&game_info, &mut dt)?);
 		}
 		for action in actions {
 			match action {
-				Action::Add(to_adds) => {
-					for to_add in to_adds {
-						game_objects.push(to_add);
+				Action::Add(to_add) => game_objects.push(to_add),
+				Action::Remove(to_remove) => {
+					if let Some(i) = game_objects.iter().position(|o| o.id() == to_remove) {
+						game_objects.remove(i);
 					}
 				}
-				Action::Remove(to_removes) => {
-					game_objects = game_objects
-						.into_iter()
-						.filter(|o| !to_removes.contains(&o.id()))
-						.collect();
-				}
-				Action::Continue() => {}
 			}
 		}
 

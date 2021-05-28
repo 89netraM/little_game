@@ -34,7 +34,7 @@ pub struct Player {
 }
 
 impl Player {
-	fn update(&mut self, game_info: &GameInfo) -> Action {
+	fn update(&mut self, game_info: &GameInfo) -> Vec<Action> {
 		if (CENTER - self.pos).square_length() < RING_SIZE_SQUARED {
 			if let Some(mouse_pos) = game_info.window.get_mouse_pos(MouseMode::Discard) {
 				self.rotation = (mouse_pos.0 - self.pos.x).atan2(mouse_pos.1 - self.pos.y);
@@ -81,12 +81,12 @@ impl Player {
 		if self.is_shooting && self.previous_bullet.elapsed().as_secs_f32() > BULLET_DELAY {
 			self.previous_bullet = Instant::now();
 			let heading = Vector2D::new(self.rotation.sin(), self.rotation.cos());
-			Action::Add(vec![Box::new(Bullet::new(
+			vec![Action::Add(Box::new(Bullet::new(
 				self.pos + heading * HALF_SIZE,
 				heading,
-			))])
+			)))]
 		} else {
-			Action::Continue()
+			Vec::new()
 		}
 	}
 
@@ -148,7 +148,7 @@ impl GameObject for Player {
 		})
 	}
 
-	fn update(&mut self, game_info: &GameInfo, dt: &mut DrawTarget) -> Result<Action, String> {
+	fn update(&mut self, game_info: &GameInfo, dt: &mut DrawTarget) -> Result<Vec<Action>, String> {
 		let action = self.update(game_info);
 		self.draw(dt);
 		Ok(action)

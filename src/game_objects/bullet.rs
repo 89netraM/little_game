@@ -25,7 +25,7 @@ impl Bullet {
 		}
 	}
 
-	fn update(&mut self, game_info: &GameInfo) -> Action {
+	fn update(&mut self, game_info: &GameInfo) -> Vec<Action> {
 		self.pos += self.heading * SPEED * game_info.delta_time.as_secs_f32();
 
 		if self.pos.x < HALF_SIZE
@@ -33,15 +33,15 @@ impl Bullet {
 			|| self.pos.x > FAR_EDGE
 			|| self.pos.y > FAR_EDGE
 		{
-			Action::Remove(vec![self.id])
+			vec![Action::Remove(self.id)]
 		} else if let Some(body) = game_info
 			.bodies
 			.iter()
 			.find(|b| b.id > 2 && (self.pos - b.pos).length() < b.radius + HALF_SIZE)
 		{
-			Action::Remove(vec![self.id, body.id])
+			vec![Action::Remove(self.id), Action::Remove(body.id)]
 		} else {
-			Action::Continue()
+			Vec::new()
 		}
 	}
 
@@ -67,7 +67,7 @@ impl GameObject for Bullet {
 		None
 	}
 
-	fn update(&mut self, game_info: &GameInfo, dt: &mut DrawTarget) -> Result<Action, String> {
+	fn update(&mut self, game_info: &GameInfo, dt: &mut DrawTarget) -> Result<Vec<Action>, String> {
 		let action = self.update(game_info);
 		self.draw(dt);
 		Ok(action)

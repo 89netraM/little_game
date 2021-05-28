@@ -24,11 +24,10 @@ pub trait GameObject {
 
 	fn body(&self) -> Option<PhysicalBody>;
 
-	fn update(&mut self, game_info: &GameInfo, dt: &mut DrawTarget) -> Result<Action, String>;
+	fn update(&mut self, game_info: &GameInfo, dt: &mut DrawTarget) -> Result<Vec<Action>, String>;
 }
 
 pub enum Action {
-	Continue(),
-	Add(Vec<Box<dyn GameObject>>),
-	Remove(Vec<usize>),
+	Add(Box<dyn GameObject>),
+	Remove(usize),
 }
