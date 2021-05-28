@@ -1,14 +1,18 @@
+mod game_info;
 mod game_objects;
 
 use std::{
 	io::{stdin, stdout, Write},
-	time::Instant,
+	time::{Duration, Instant},
 };
 
 use minifb::{Window, WindowOptions};
 use raqote::{DrawTarget, SolidSource};
 
-use self::game_objects::{Action, EnemySpawner, GameObject, Player, Ring};
+use self::{
+	game_info::GameInfo,
+	game_objects::{Action, EnemySpawner, GameObject, Player, Ring},
+};
 
 const TITLE: &str = "Little Game";
 pub const GAME_SIZE: usize = 800;
@@ -23,31 +27,39 @@ fn main() {
 }
 
 fn game() -> Result<(), String> {
-	let mut window = Window::new(TITLE, GAME_SIZE, GAME_SIZE, WindowOptions::default())
-		.map_err(|_| "Could not create a window.".to_string())?;
-
-	let size = window.get_size();
-	let mut dt = DrawTarget::new(size.0 as i32, size.1 as i32);
-	let start = Instant::now();
-	let mut previous = Instant::now();
-
 	let mut game_objects: Vec<Box<dyn GameObject>> = vec![
 		Box::new(Ring::default()),
 		Box::new(Player::default()),
 		Box::new(EnemySpawner::default()),
 	];
+	let mut game_info = GameInfo {
+		window: Window::new(TITLE, GAME_SIZE, GAME_SIZE, WindowOptions::default())
+			.map_err(|_| "Could not create a window.".to_string())?,
+		bodies: Vec::new(),
+		game_time: Duration::default(),
+		delta_time: Duration::default(),
+	};
 
-	while window.is_open() {
+	let size = game_info.window.get_size();
+	let mut dt = DrawTarget::new(size.0 as i32, size.1 as i32);
+	let start = Instant::now();
+	let mut previous = Instant::now();
+
+	while game_info.window.is_open() {
 		dt.clear(SolidSource::from_unpremultiplied_argb(
 			0xff, 0xff, 0xff, 0xff,
 		));
 
-		let game_time = start.elapsed();
-		let delta_time = previous.elapsed();
+		game_info.bodies.clear();
+		game_info
+			.bodies
+			.extend(game_objects.iter().filter_map(|o| o.body()));
+		game_info.game_time = start.elapsed();
+		game_info.delta_time = previous.elapsed();
 
 		let mut actions = Vec::new();
 		for game_object in &mut game_objects {
-			match game_object.update(&window, &mut dt, &game_time, &delta_time)? {
+			match game_object.update(&game_info, &mut dt)? {
 				Action::Continue() => {}
 				a => actions.push(a),
 			}
@@ -71,7 +83,8 @@ fn game() -> Result<(), String> {
 
 		previous = Instant::now();
 
-		window
+		game_info
+			.window
 			.update_with_buffer(dt.get_data(), size.0, size.1)
 			.map_err(|_| "Could not update window frame. No idea what's going one.".to_string())?;
 	}

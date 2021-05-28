@@ -1,10 +1,7 @@
-use std::time::Duration;
-
-use minifb::Window;
 use raqote::{DrawOptions, DrawTarget, PathBuilder, SolidSource, Source, StrokeStyle};
 
-use super::{game_object::get_new_object_id, Action, GameObject};
-use crate::GAME_SIZE;
+use super::{game_object::get_new_object_id, Action, GameObject, PhysicalBody};
+use crate::{game_info::GameInfo, GAME_SIZE};
 
 const OFFSET: f32 = GAME_SIZE as f32 / 2.0;
 pub const RING_SIZE: f32 = OFFSET / 2.0;
@@ -24,13 +21,11 @@ impl GameObject for Ring {
 		self.0
 	}
 
-	fn update(
-		&mut self,
-		_: &Window,
-		dt: &mut DrawTarget,
-		_: &Duration,
-		_: &Duration,
-	) -> Result<Action, String> {
+	fn body(&self) -> Option<PhysicalBody> {
+		None
+	}
+
+	fn update(&mut self, _: &GameInfo, dt: &mut DrawTarget) -> Result<Action, String> {
 		let mut pb = PathBuilder::new();
 		pb.arc(OFFSET, OFFSET, RING_SIZE, 0.0, CIRCLE_ANGLE);
 		dt.stroke(

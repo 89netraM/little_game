@@ -1,11 +1,8 @@
-use std::time::Duration;
-
 use euclid::{UnknownUnit, Vector2D};
-use minifb::Window;
 use raqote::{DrawOptions, DrawTarget, PathBuilder, SolidSource, Source};
 
-use super::{game_object::get_new_object_id, Action, GameObject};
-use crate::GAME_SIZE;
+use super::{game_object::get_new_object_id, Action, GameObject, PhysicalBody};
+use crate::{game_info::GameInfo, GAME_SIZE};
 
 const SIZE: f32 = GAME_SIZE as f32 / 160.0;
 const HALF_SIZE: f32 = SIZE / 2.0;
@@ -28,8 +25,8 @@ impl Bullet {
 		}
 	}
 
-	fn update(&mut self, delta_time: &Duration) -> Action {
-		self.pos += self.heading * SPEED * delta_time.as_secs_f32();
+	fn update(&mut self, game_info: &GameInfo) -> Action {
+		self.pos += self.heading * SPEED * game_info.delta_time.as_secs_f32();
 
 		if self.pos.x < HALF_SIZE
 			|| self.pos.y < HALF_SIZE
@@ -37,6 +34,12 @@ impl Bullet {
 			|| self.pos.y > FAR_EDGE
 		{
 			Action::Remove(vec![self.id])
+		} else if let Some(body) = game_info
+			.bodies
+			.iter()
+			.find(|b| b.id > 2 && (self.pos - b.pos).length() < b.radius + HALF_SIZE)
+		{
+			Action::Remove(vec![self.id, body.id])
 		} else {
 			Action::Continue()
 		}
@@ -60,14 +63,12 @@ impl GameObject for Bullet {
 		self.id
 	}
 
-	fn update(
-		&mut self,
-		_: &Window,
-		dt: &mut DrawTarget,
-		_: &Duration,
-		delta_time: &Duration,
-	) -> Result<Action, String> {
-		let action = self.update(delta_time);
+	fn body(&self) -> Option<PhysicalBody> {
+		None
+	}
+
+	fn update(&mut self, game_info: &GameInfo, dt: &mut DrawTarget) -> Result<Action, String> {
+		let action = self.update(game_info);
 		self.draw(dt);
 		Ok(action)
 	}

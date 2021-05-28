@@ -1,11 +1,10 @@
 use std::time::{Duration, Instant};
 
 use euclid::{Angle, Transform2D, UnknownUnit, Vector2D};
-use minifb::Window;
 use raqote::{DrawOptions, DrawTarget, PathBuilder, SolidSource, Source};
 
-use super::{game_object::get_new_object_id, ring::RING_SIZE, Action, GameObject};
-use crate::GAME_SIZE;
+use super::{game_object::get_new_object_id, ring::RING_SIZE, Action, GameObject, PhysicalBody};
+use crate::{game_info::GameInfo, GAME_SIZE};
 
 const ENEMY_SPAWN_INTERVAL: f32 = 1.0;
 const PI2: f32 = std::f32::consts::PI * 2.0;
@@ -39,13 +38,11 @@ impl GameObject for EnemySpawner {
 		self.id
 	}
 
-	fn update(
-		&mut self,
-		_: &Window,
-		_: &mut DrawTarget,
-		_: &Duration,
-		_: &Duration,
-	) -> Result<Action, String> {
+	fn body(&self) -> Option<PhysicalBody> {
+		None
+	}
+
+	fn update(&mut self, _: &GameInfo, _: &mut DrawTarget) -> Result<Action, String> {
 		if self.last_enemy_spawn.elapsed().as_secs_f32() > ENEMY_SPAWN_INTERVAL {
 			self.last_enemy_spawn = Instant::now();
 			let rotation = rand::random::<f32>() * PI2;
@@ -122,14 +119,16 @@ impl GameObject for Enemy {
 		self.id
 	}
 
-	fn update(
-		&mut self,
-		_: &Window,
-		dt: &mut DrawTarget,
-		_: &Duration,
-		delta_time: &Duration,
-	) -> Result<Action, String> {
-		let action = self.update(delta_time);
+	fn body(&self) -> Option<PhysicalBody> {
+		Some(PhysicalBody {
+			id: self.id,
+			pos: self.pos,
+			radius: HALF_SIZE,
+		})
+	}
+
+	fn update(&mut self, game_info: &GameInfo, dt: &mut DrawTarget) -> Result<Action, String> {
+		let action = self.update(&game_info.delta_time);
 		self.draw(dt);
 		Ok(action)
 	}

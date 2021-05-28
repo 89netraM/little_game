@@ -1,11 +1,18 @@
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use euclid::{Angle, Transform2D, UnknownUnit, Vector2D};
-use minifb::{Key, MouseButton, MouseMode, Window};
+use minifb::{Key, MouseButton, MouseMode};
 use raqote::{DrawOptions, DrawTarget, PathBuilder, SolidSource, Source};
 
-use super::{game_object::get_new_object_id, ring::RING_SIZE, Action, Bullet, GameObject};
-use crate::GAME_SIZE;
+use super::{
+	game_object::get_new_object_id,
+	ring::RING_SIZE,
+	Action,
+	Bullet,
+	GameObject,
+	PhysicalBody,
+};
+use crate::{game_info::GameInfo, GAME_SIZE};
 
 const SPEED: f32 = GAME_SIZE as f32 / 2.0;
 const CENTER: Vector2D<f32, UnknownUnit> =
@@ -27,31 +34,31 @@ pub struct Player {
 }
 
 impl Player {
-	fn update(&mut self, window: &Window, delta_time: &Duration) -> Action {
+	fn update(&mut self, game_info: &GameInfo) -> Action {
 		if (CENTER - self.pos).square_length() < RING_SIZE_SQUARED {
-			if let Some(mouse_pos) = window.get_mouse_pos(MouseMode::Discard) {
+			if let Some(mouse_pos) = game_info.window.get_mouse_pos(MouseMode::Discard) {
 				self.rotation = (mouse_pos.0 - self.pos.x).atan2(mouse_pos.1 - self.pos.y);
 			}
 
 			self.velocity = Vector2D::zero();
-			if window.is_key_down(Key::A) {
+			if game_info.window.is_key_down(Key::A) {
 				self.velocity.x -= 1.0;
 			}
-			if window.is_key_down(Key::D) {
+			if game_info.window.is_key_down(Key::D) {
 				self.velocity.x += 1.0;
 			}
-			if window.is_key_down(Key::W) {
+			if game_info.window.is_key_down(Key::W) {
 				self.velocity.y -= 1.0;
 			}
-			if window.is_key_down(Key::S) {
+			if game_info.window.is_key_down(Key::S) {
 				self.velocity.y += 1.0;
 			}
 
-			self.is_shooting = window.get_mouse_down(MouseButton::Left);
+			self.is_shooting = game_info.window.get_mouse_down(MouseButton::Left);
 		}
 
 		if self.velocity != Vector2D::zero() {
-			self.pos += self.velocity.normalize() * SPEED * delta_time.as_secs_f32();
+			self.pos += self.velocity.normalize() * SPEED * game_info.delta_time.as_secs_f32();
 		}
 
 		if self.pos.x < HALF_SIZE {
@@ -133,14 +140,16 @@ impl GameObject for Player {
 		self.id
 	}
 
-	fn update(
-		&mut self,
-		window: &Window,
-		dt: &mut DrawTarget,
-		_: &Duration,
-		delta_time: &Duration,
-	) -> Result<Action, String> {
-		let action = self.update(window, delta_time);
+	fn body(&self) -> Option<PhysicalBody> {
+		Some(PhysicalBody {
+			id: self.id,
+			pos: self.pos,
+			radius: HALF_SIZE,
+		})
+	}
+
+	fn update(&mut self, game_info: &GameInfo, dt: &mut DrawTarget) -> Result<Action, String> {
+		let action = self.update(game_info);
 		self.draw(dt);
 		Ok(action)
 	}
