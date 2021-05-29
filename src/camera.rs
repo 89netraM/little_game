@@ -2,14 +2,13 @@ use std::f32;
 
 use kiss3d::{
 	camera::Camera,
-	event::{Action, Key, WindowEvent},
+	event::WindowEvent,
 	nalgebra::{
 		self,
 		Isometry3,
 		Matrix4,
 		Perspective3,
 		Point3,
-		Translation3,
 		Unit,
 		UnitQuaternion,
 		Vector2,
@@ -36,7 +35,7 @@ pub struct FirstPerson {
 
 impl FirstPerson {
 	pub fn new(eye: Point3<f32>, at: Point3<f32>) -> FirstPerson {
-		FirstPerson::new_with_frustrum(f32::consts::PI / 4.0, 0.1, 1024.0, eye, at)
+		FirstPerson::new_with_frustrum(f32::consts::PI / 4.0, 0.05, 1024.0, eye, at)
 	}
 
 	pub fn new_with_frustrum(
@@ -114,7 +113,7 @@ impl FirstPerson {
 			.map(|inverse_proj| self.inverse_proj_view = inverse_proj);
 	}
 
-	fn move_dir(&self, up: bool, down: bool, right: bool, left: bool) -> Vector3<f32> {
+	pub fn move_dir(&self, up: bool, down: bool, right: bool, left: bool) -> Option<Vector3<f32>> {
 		let t = self.observer_frame();
 		let front_v = t * Vector3::z();
 		let right_v = t * Vector3::x();
@@ -134,21 +133,20 @@ impl FirstPerson {
 				movement += right_v;
 			}
 			movement.y = 0.0;
-			movement.normalize()
+			movement.set_magnitude(MOVE_STEP);
+			Some(movement)
 		} else {
-			movement
+			None
 		}
 	}
 
 	#[inline]
-	fn translate_mut(&mut self, t: &Translation3<f32>) {
-		let new_eye = t * self.eye;
-
-		self.set_eye(new_eye);
+	pub fn eye(&self) -> &Point3<f32> {
+		&self.eye
 	}
 
 	#[inline]
-	fn set_eye(&mut self, eye: Point3<f32>) {
+	pub fn set_eye(&mut self, eye: Point3<f32>) {
 		self.eye = eye;
 		self.update_restrictions();
 		self.update_projviews();
@@ -210,16 +208,7 @@ impl Camera for FirstPerson {
 		view.upload(&self.view);
 	}
 
-	fn update(&mut self, canvas: &Canvas) {
-		let dir = self.move_dir(
-			canvas.get_key(Key::W) == Action::Press,
-			canvas.get_key(Key::S) == Action::Press,
-			canvas.get_key(Key::D) == Action::Press,
-			canvas.get_key(Key::A) == Action::Press,
-		);
-
-		let move_amount = dir * MOVE_STEP;
-		self.translate_mut(&Translation3::from(move_amount));
+	fn update(&mut self, _: &Canvas) {
 	}
 }
 
