@@ -139,17 +139,18 @@ fn play(font: &Font, window: &mut Window, dt: &mut DrawTarget) -> Result<bool, S
 	let mut previous = Instant::now();
 
 	while game_info.window.is_open() && game_info.ring_radius > MIN_RING_RADIUS {
-		dt.clear(SolidSource::from_unpremultiplied_argb(
-			0xff, 0xff, 0xff, 0xff,
-		));
-
+		game_info.delta_time = previous.elapsed();
+		previous = Instant::now();
 		game_info.bodies.clear();
 		game_info
 			.bodies
 			.extend(game_objects.iter().filter_map(|o| o.body()));
 		game_info.ring_radius = ring.radius();
 		game_info.game_time = start.elapsed();
-		game_info.delta_time = previous.elapsed();
+
+		dt.clear(SolidSource::from_unpremultiplied_argb(
+			0xff, 0xff, 0xff, 0xff,
+		));
 
 		ring.update(&game_info, dt)?;
 		let mut actions = Vec::new();
@@ -218,8 +219,6 @@ fn play(font: &Font, window: &mut Window, dt: &mut DrawTarget) -> Result<bool, S
 				);
 			}
 		}
-
-		previous = Instant::now();
 
 		game_info
 			.window
