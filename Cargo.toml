@@ -11,3 +11,4 @@ opt-level = "z"
 
 [dependencies]
 kiss3d = "0.31.0"
+rand = "0.8.3"
