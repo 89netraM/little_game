@@ -119,7 +119,7 @@ impl FirstPerson {
 		let right_v = t * Vector3::x();
 
 		let mut movement = nalgebra::zero::<Vector3<f32>>();
-		if up || down || right || left {
+		if up != down || right != left {
 			if up {
 				movement += front_v;
 			}
