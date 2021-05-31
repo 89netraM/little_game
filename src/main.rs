@@ -139,7 +139,7 @@ fn add_maze(window: &mut Window) -> (Vec<Wall>, SceneNode) {
 			let mut ceiling = grid_group.add_quad(MAZE_SIZE, MAZE_SIZE, 1, 1);
 			ceiling.prepend_to_local_rotation(&ceiling_turn);
 			ceiling.append_translation(&MAZE_CEILING);
-			ceiling.set_texture_with_name("floor");
+			ceiling.set_texture_with_name("ceiling");
 			ceiling.set_material_with_name("pixel");
 			grid_group.append_translation(&Translation3::new(
 				row as f32 * MAZE_SIZE,
