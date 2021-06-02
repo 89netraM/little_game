@@ -1,6 +1,12 @@
 use std::{collections::HashSet, iter::FromIterator};
 
-use rand::{thread_rng, Rng};
+use rand::{rngs::StdRng, Rng};
+
+use super::rng::rng_for_maze;
+
+pub const ROOM_SIZE: usize = 5;
+pub const ROOM_CENTER: usize = ROOM_SIZE / 2;
+pub const MAP_LENGTH: usize = ROOM_SIZE * 2 * ROOM_SIZE - (ROOM_SIZE + ROOM_SIZE);
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Direction {
@@ -25,28 +31,20 @@ pub struct Position(
 	pub usize,
 );
 
-pub struct Map {
-	pub rows: usize,
-	pub columns: usize,
-	map: Box<[bool]>,
-}
+pub struct Map([bool; MAP_LENGTH]);
 
 impl Map {
-	fn new(rows: usize, columns: usize) -> Map {
-		Map {
-			rows,
-			columns,
-			map: vec![true; rows * 2 * columns - (rows + columns)].into_boxed_slice(),
-		}
+	fn new() -> Map {
+		Map([true; MAP_LENGTH])
 	}
 
-	pub fn generate_prim(rows: usize, columns: usize, start: Position) -> Map {
-		let mut map = Map::new(rows, columns);
-		let mut rng = thread_rng();
+	pub fn generate_prim(seed: u64, position: (i64, i64)) -> Map {
+		let mut map = Map::new();
+		let mut rng: StdRng = rng_for_maze(seed, position);
 
 		let mut visited = HashSet::new();
-		visited.insert(start);
-		let mut walls: Vec<_> = map.walls_around(&start);
+		visited.insert(Position(ROOM_CENTER, ROOM_CENTER));
+		let mut walls: Vec<_> = map.walls_around(&Position(ROOM_CENTER, ROOM_CENTER));
 
 		while !walls.is_empty() {
 			let index = rng.gen_range(0..walls.len());
@@ -86,30 +84,30 @@ impl Map {
 
 	#[inline]
 	pub fn set_right(&mut self, pos: &Position, closed: bool) {
-		assert!(pos.0 < self.rows && pos.1 < self.columns - 1);
+		debug_assert!(pos.0 < ROOM_SIZE && pos.1 < ROOM_SIZE - 1);
 
-		self.map[(self.rows - 1) * self.columns + pos.0 * (self.columns - 1) + pos.1] = closed;
+		self.0[(ROOM_SIZE - 1) * ROOM_SIZE + pos.0 * (ROOM_SIZE - 1) + pos.1] = closed;
 	}
 
 	#[inline]
 	pub fn is_right(&self, pos: &Position) -> bool {
-		assert!(pos.0 < self.rows && pos.1 < self.columns - 1);
+		debug_assert!(pos.0 < ROOM_SIZE && pos.1 < ROOM_SIZE - 1);
 
-		self.map[(self.rows - 1) * self.columns + pos.0 * (self.columns - 1) + pos.1]
+		self.0[(ROOM_SIZE - 1) * ROOM_SIZE + pos.0 * (ROOM_SIZE - 1) + pos.1]
 	}
 
 	#[inline]
 	pub fn set_below(&mut self, pos: &Position, closed: bool) {
-		assert!(pos.0 < self.rows - 1 && pos.1 < self.columns);
+		debug_assert!(pos.0 < ROOM_SIZE - 1 && pos.1 < ROOM_SIZE);
 
-		self.map[pos.0 * self.columns + pos.1] = closed;
+		self.0[pos.0 * ROOM_SIZE + pos.1] = closed;
 	}
 
 	#[inline]
 	pub fn is_below(&self, pos: &Position) -> bool {
-		assert!(pos.0 < self.rows - 1 && pos.1 < self.columns);
+		debug_assert!(pos.0 < ROOM_SIZE - 1 && pos.1 < ROOM_SIZE);
 
-		self.map[pos.0 * self.columns + pos.1]
+		self.0[pos.0 * ROOM_SIZE + pos.1]
 	}
 
 	pub fn set(&mut self, pos: &Position, dir: &Direction, closed: bool) {
@@ -123,16 +121,16 @@ impl Map {
 
 	pub fn is(&self, pos: &Position, dir: &Direction) -> Option<bool> {
 		match dir {
-			Direction::Up if 0 < pos.0 && pos.0 < self.rows && pos.1 < self.columns => {
+			Direction::Up if 0 < pos.0 && pos.0 < ROOM_SIZE && pos.1 < ROOM_SIZE => {
 				Some(self.is_above(pos))
 			}
-			Direction::Left if pos.0 < self.rows && 0 < pos.1 && pos.1 < self.columns => {
+			Direction::Left if pos.0 < ROOM_SIZE && 0 < pos.1 && pos.1 < ROOM_SIZE => {
 				Some(self.is_left(pos))
 			}
-			Direction::Right if pos.0 < self.rows && pos.1 < self.columns - 1 => {
+			Direction::Right if pos.0 < ROOM_SIZE && pos.1 < ROOM_SIZE - 1 => {
 				Some(self.is_right(pos))
 			}
-			Direction::Down if pos.0 < self.rows - 1 && pos.1 < self.columns => {
+			Direction::Down if pos.0 < ROOM_SIZE - 1 && pos.1 < ROOM_SIZE => {
 				Some(self.is_below(pos))
 			}
 			_ => None,
@@ -143,10 +141,10 @@ impl Map {
 		match dir {
 			Direction::Up if current.0 > 0 => Some(Position(current.0 - 1, current.1)),
 			Direction::Left if current.1 > 0 => Some(Position(current.0, current.1 - 1)),
-			Direction::Right if current.1 < self.columns - 1 => {
+			Direction::Right if current.1 < ROOM_SIZE - 1 => {
 				Some(Position(current.0, current.1 + 1))
 			}
-			Direction::Down if current.0 < self.rows - 1 => {
+			Direction::Down if current.0 < ROOM_SIZE - 1 => {
 				Some(Position(current.0 + 1, current.1))
 			}
 			_ => None,
