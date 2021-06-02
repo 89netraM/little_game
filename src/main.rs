@@ -1,10 +1,12 @@
+#![feature(hash_drain_filter)]
+
 mod camera;
 mod map;
 mod rng;
 mod textures;
 mod wall;
 
-use std::f32;
+use std::{collections::HashMap, f32};
 
 use kiss3d::{
 	event::{Action, Key},
@@ -34,12 +36,11 @@ fn main() {
 	cube.set_color(0.0, 1.0, 1.0);
 	cube.append_translation(&Translation3::new(MAZE_SIZE * 2.0, -0.25, MAZE_SIZE * -2.0));
 
-	let mut walls = Vec::new();
-	let _maze_origin = add_maze(&mut window, 0, (0, 0), &mut walls);
-	let _maze_up = add_maze(&mut window, 0, (0, -1), &mut walls);
-	let _maze_left = add_maze(&mut window, 0, (-1, 0), &mut walls);
-	let _maze_right = add_maze(&mut window, 0, (1, 0), &mut walls);
-	let _maze_down = add_maze(&mut window, 0, (0, 1), &mut walls);
+	let seed = 0;
+
+	let mut chunks = HashMap::new();
+	let mut previous_position = (0, 0);
+	update_chunks(seed, previous_position, &mut window, &mut chunks);
 
 	let rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), 0.014);
 
@@ -54,10 +55,46 @@ fn main() {
 		);
 		if let Some(dir) = movement {
 			let mut next_camera_eye = camera.eye() + dir;
-			for wall in &walls {
+
+			let position = (
+				(-camera.eye().z / MAZE_SIZE / ROOM_SIZE as f32).round() as i64,
+				(camera.eye().x / MAZE_SIZE / ROOM_SIZE as f32).round() as i64,
+			);
+			if position != previous_position {
+				update_chunks(seed, position, &mut window, &mut chunks);
+			}
+
+			for wall in &chunks.get(&position).unwrap().0 {
 				wall.push_back(&mut next_camera_eye);
 			}
 			camera.set_eye(next_camera_eye);
+
+			previous_position = position;
+		}
+	}
+}
+
+const CHUNK_RANGE: i64 = 2;
+
+fn update_chunks(
+	seed: u64,
+	position: (i64, i64),
+	window: &mut Window,
+	chunks: &mut HashMap<(i64, i64), (Vec<Wall>, SceneNode)>,
+) {
+	for (_, (_, mut node)) in chunks
+		.drain_filter(|p, _| ((p.0 - position.0).abs() + (p.1 - position.1).abs()) > CHUNK_RANGE)
+	{
+		window.remove_node(&mut node);
+	}
+
+	for y in -CHUNK_RANGE..=CHUNK_RANGE {
+		let width = CHUNK_RANGE - y.abs();
+		for x in -width..=width {
+			let position = (position.0 + x, position.1 + y);
+			chunks
+				.entry(position)
+				.or_insert_with(|| add_maze(window, seed, position));
 		}
 	}
 }
@@ -73,12 +110,7 @@ const MAZE_BELOW: Translation3<f32> = Translation3::new(MAZE_SIZE_HALF, 0.0, 0.0
 const MAZE_FLOOR: Translation3<f32> = Translation3::new(0.0, -MAZE_HEIGHT / 2.0, 0.0);
 const MAZE_CEILING: Translation3<f32> = Translation3::new(0.0, MAZE_HEIGHT / 2.0, 0.0);
 
-fn add_maze(
-	window: &mut Window,
-	seed: u64,
-	position: (i64, i64),
-	walls: &mut Vec<Wall>,
-) -> SceneNode {
+fn add_maze(window: &mut Window, seed: u64, position: (i64, i64)) -> (Vec<Wall>, SceneNode) {
 	let half_turn = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), f32::consts::PI);
 	let quarter_turn = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), f32::consts::PI / 2.0);
 	let three_quarter_turn =
@@ -86,7 +118,7 @@ fn add_maze(
 	let floor_turn = UnitQuaternion::from_axis_angle(&Vector3::x_axis(), -f32::consts::PI / 2.0);
 	let ceiling_turn = UnitQuaternion::from_axis_angle(&Vector3::x_axis(), f32::consts::PI / 2.0);
 	let x_offset = MAZE_OFFSET + (position.1 * ROOM_SIZE as i64) as f32 * MAZE_SIZE;
-	let y_offset = -(MAZE_OFFSET + (position.0 * ROOM_SIZE as i64) as f32 * MAZE_SIZE);
+	let z_offset = -(MAZE_OFFSET + (position.0 * ROOM_SIZE as i64) as f32 * MAZE_SIZE);
 
 	fn create_maze_quad(parent: &mut SceneNode) -> SceneNode {
 		let mut quad = parent.add_quad(MAZE_SIZE, MAZE_HEIGHT, 1, 1);
@@ -104,8 +136,9 @@ fn add_maze(
 	};
 
 	let map = Map::generate_prim(seed, position);
+	let mut walls = Vec::new();
 	let mut group = window.add_group();
-	group.append_translation(&Translation3::new(x_offset, 0.0, y_offset));
+	group.append_translation(&Translation3::new(x_offset, 0.0, z_offset));
 	let wall_up_opening = rand_for_border_walls::<StdRng>(seed, position, Direction::Up, ROOM_SIZE);
 	let wall_left_opening =
 		rand_for_border_walls::<StdRng>(seed, position, Direction::Left, ROOM_SIZE);
@@ -122,11 +155,23 @@ fn add_maze(
 				let mut quad = create_maze_quad(&mut grid_group);
 				quad.prepend_to_local_rotation(&quarter_turn);
 				quad.append_translation(&MAZE_ABOVE);
+
+				walls.push(Wall::Horizontal(Point3::new(
+					x_offset + row as f32 * MAZE_SIZE - MAZE_SIZE_HALF,
+					0.0,
+					z_offset + col as f32 * -MAZE_SIZE,
+				)));
 			}
 			if col == 0 && row != wall_left_opening {
 				let mut quad = create_maze_quad(&mut grid_group);
 				quad.prepend_to_local_rotation(&half_turn);
 				quad.append_translation(&MAZE_LEFT);
+
+				walls.push(Wall::Vertical(Point3::new(
+					x_offset + row as f32 * MAZE_SIZE,
+					0.0,
+					z_offset + col as f32 * -MAZE_SIZE + MAZE_SIZE_HALF,
+				)));
 			}
 			if col + 1 == ROOM_SIZE {
 				if row != wall_right_opening {
@@ -136,7 +181,7 @@ fn add_maze(
 					walls.push(Wall::Vertical(Point3::new(
 						x_offset + row as f32 * MAZE_SIZE,
 						0.0,
-						y_offset + col as f32 * -MAZE_SIZE - MAZE_SIZE_HALF,
+						z_offset + col as f32 * -MAZE_SIZE - MAZE_SIZE_HALF,
 					)));
 				}
 			} else if map.is_right(&pos) {
@@ -146,7 +191,7 @@ fn add_maze(
 				walls.push(Wall::Vertical(Point3::new(
 					x_offset + row as f32 * MAZE_SIZE,
 					0.0,
-					y_offset + col as f32 * -MAZE_SIZE - MAZE_SIZE_HALF,
+					z_offset + col as f32 * -MAZE_SIZE - MAZE_SIZE_HALF,
 				)));
 			}
 			if row + 1 == ROOM_SIZE {
@@ -158,7 +203,7 @@ fn add_maze(
 					walls.push(Wall::Horizontal(Point3::new(
 						x_offset + row as f32 * MAZE_SIZE + MAZE_SIZE_HALF,
 						0.0,
-						y_offset + col as f32 * -MAZE_SIZE,
+						z_offset + col as f32 * -MAZE_SIZE,
 					)));
 				}
 			} else if map.is_below(&pos) {
@@ -169,7 +214,7 @@ fn add_maze(
 				walls.push(Wall::Horizontal(Point3::new(
 					x_offset + row as f32 * MAZE_SIZE + MAZE_SIZE_HALF,
 					0.0,
-					y_offset + col as f32 * -MAZE_SIZE,
+					z_offset + col as f32 * -MAZE_SIZE,
 				)));
 			}
 			let mut floor = grid_group.add_quad(MAZE_SIZE, MAZE_SIZE, 1, 1);
@@ -190,5 +235,5 @@ fn add_maze(
 		}
 	}
 
-	group
+	(walls, group)
 }
