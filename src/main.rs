@@ -121,17 +121,12 @@ fn add_maze(window: &mut Window, seed: u64, position: (i64, i64)) -> (Vec<Wall>,
 	let z_offset = -(MAZE_OFFSET + (position.0 * ROOM_SIZE as i64) as f32 * MAZE_SIZE);
 
 	fn create_maze_quad(parent: &mut SceneNode) -> SceneNode {
-		let mut quad = parent.add_quad(MAZE_SIZE, MAZE_HEIGHT, 1, 1);
-		quad.set_texture_with_name("wall");
-		quad.set_material_with_name("pixel");
-		quad
+		parent.add_quad(MAZE_SIZE, MAZE_HEIGHT, 1, 1)
 	}
 	let create_double_maze_quad = |parent: &mut SceneNode| -> SceneNode {
 		let mut quad = create_maze_quad(parent);
 		let mut quad2 = quad.add_quad(MAZE_SIZE, MAZE_HEIGHT, 1, 1);
 		quad2.prepend_to_local_rotation(&half_turn);
-		quad2.set_texture_with_name("wall");
-		quad2.set_material_with_name("pixel");
 		quad
 	};
 
@@ -139,6 +134,9 @@ fn add_maze(window: &mut Window, seed: u64, position: (i64, i64)) -> (Vec<Wall>,
 	let mut walls = Vec::new();
 	let mut group = window.add_group();
 	group.append_translation(&Translation3::new(x_offset, 0.0, z_offset));
+	let mut ceiling_group = group.add_group();
+	let mut wall_group = group.add_group();
+	let mut floor_group = group.add_group();
 	let wall_up_opening = rand_for_border_walls::<StdRng>(seed, position, Direction::Up, ROOM_SIZE);
 	let wall_left_opening =
 		rand_for_border_walls::<StdRng>(seed, position, Direction::Left, ROOM_SIZE);
@@ -149,7 +147,7 @@ fn add_maze(window: &mut Window, seed: u64, position: (i64, i64)) -> (Vec<Wall>,
 
 	for row in 0..ROOM_SIZE {
 		for col in 0..ROOM_SIZE {
-			let mut grid_group = group.add_group();
+			let mut grid_group = wall_group.add_group();
 			let pos = Position(row, col);
 			if row == 0 && col != wall_up_opening {
 				let mut quad = create_maze_quad(&mut grid_group);
@@ -217,23 +215,26 @@ fn add_maze(window: &mut Window, seed: u64, position: (i64, i64)) -> (Vec<Wall>,
 					z_offset + col as f32 * -MAZE_SIZE,
 				)));
 			}
-			let mut floor = grid_group.add_quad(MAZE_SIZE, MAZE_SIZE, 1, 1);
+			let grid_translation =
+				Translation3::new(row as f32 * MAZE_SIZE, 0.0, col as f32 * -MAZE_SIZE);
+			let mut floor = floor_group.add_quad(MAZE_SIZE, MAZE_SIZE, 1, 1);
 			floor.prepend_to_local_rotation(&floor_turn);
 			floor.append_translation(&MAZE_FLOOR);
-			floor.set_texture_with_name("floor");
-			floor.set_material_with_name("pixel");
-			let mut ceiling = grid_group.add_quad(MAZE_SIZE, MAZE_SIZE, 1, 1);
+			floor.append_translation(&grid_translation);
+			let mut ceiling = ceiling_group.add_quad(MAZE_SIZE, MAZE_SIZE, 1, 1);
 			ceiling.prepend_to_local_rotation(&ceiling_turn);
 			ceiling.append_translation(&MAZE_CEILING);
-			ceiling.set_texture_with_name("ceiling");
-			ceiling.set_material_with_name("pixel");
-			grid_group.append_translation(&Translation3::new(
-				row as f32 * MAZE_SIZE,
-				0.0,
-				col as f32 * -MAZE_SIZE,
-			));
+			ceiling.append_translation(&grid_translation);
+			grid_group.append_translation(&grid_translation);
 		}
 	}
+
+	ceiling_group.set_texture_with_name("ceiling");
+	ceiling_group.set_material_with_name("pixel");
+	wall_group.set_texture_with_name("wall");
+	wall_group.set_material_with_name("pixel");
+	floor_group.set_texture_with_name("floor");
+	floor_group.set_material_with_name("pixel");
 
 	(walls, group)
 }
