@@ -1,8 +1,6 @@
 use std::{collections::HashSet, iter::FromIterator};
 
-use rand::{rngs::StdRng, Rng};
-
-use super::rng::rng_for_maze;
+use rand::Rng;
 
 pub const ROOM_SIZE: usize = 5;
 pub const ROOM_CENTER: usize = ROOM_SIZE / 2;
@@ -38,9 +36,11 @@ impl Map {
 		Map([true; MAP_LENGTH])
 	}
 
-	pub fn generate_prim(seed: u64, position: (i64, i64)) -> Map {
+	pub fn generate_prim<R>(rng: &mut R) -> Map
+	where
+		R: Rng,
+	{
 		let mut map = Map::new();
-		let mut rng: StdRng = rng_for_maze(seed, position);
 
 		let mut visited = HashSet::new();
 		visited.insert(Position(ROOM_CENTER, ROOM_CENTER));

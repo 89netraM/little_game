@@ -24,6 +24,7 @@ struct PixelMaterial {
 	pos: ShaderAttribute<Point3<f32>>,
 	normal: ShaderAttribute<Vector3<f32>>,
 	tex_coord: ShaderAttribute<Point2<f32>>,
+	color: ShaderUniform<Point3<f32>>,
 	transform: ShaderUniform<Matrix4<f32>>,
 	scale: ShaderUniform<Matrix3<f32>>,
 	n_transform: ShaderUniform<Matrix3<f32>>,
@@ -39,6 +40,7 @@ impl PixelMaterial {
 			pos: effect.get_attrib("position").unwrap(),
 			normal: effect.get_attrib("normal").unwrap(),
 			tex_coord: effect.get_attrib("tex_coord").unwrap(),
+			color: effect.get_uniform("color").unwrap(),
 			transform: effect.get_uniform("transform").unwrap(),
 			scale: effect.get_uniform("scale").unwrap(),
 			n_transform: effect.get_uniform("n_transform").unwrap(),
@@ -102,6 +104,8 @@ impl Material for PixelMaterial {
 		);
 
 		if data.surface_rendering_active() {
+			self.color.upload(data.color());
+
 			let _ = ctx.polygon_mode(Context::FRONT_AND_BACK, Context::FILL);
 			ctx.draw_elements(
 				Context::TRIANGLES,

@@ -9,7 +9,7 @@ varying vec2 tex_coord_v;
 varying vec3 normalInterp;
 varying vec3 vertPos;
 
-const vec3 color = vec3(1.0, 1.0, 1.0);
+uniform vec3 color;
 uniform sampler2D tex;
 
 void main() {

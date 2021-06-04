@@ -14,13 +14,13 @@ use kiss3d::{
 	scene::SceneNode,
 	window::Window,
 };
-use rand::rngs::StdRng;
+use rand::{rngs::StdRng, Rng};
 
 use self::{
 	camera::FirstPerson,
 	map::{Direction, Map, Position, ROOM_CENTER, ROOM_SIZE},
-	rng::rand_for_border_walls,
-	textures::init_textures,
+	rng::{rand_for_border_walls, rng_for_maze},
+	textures::{hsl_to_rgb, init_textures},
 	wall::Wall,
 };
 
@@ -130,7 +130,8 @@ fn add_maze(window: &mut Window, seed: u64, position: (i64, i64)) -> (Vec<Wall>,
 		quad
 	};
 
-	let map = Map::generate_prim(seed, position);
+	let mut rng: StdRng = rng_for_maze(seed, position);
+	let map = Map::generate_prim(&mut rng);
 	let mut walls = Vec::new();
 	let mut group = window.add_group();
 	group.append_translation(&Translation3::new(x_offset, 0.0, z_offset));
@@ -235,6 +236,8 @@ fn add_maze(window: &mut Window, seed: u64, position: (i64, i64)) -> (Vec<Wall>,
 	wall_group.set_material_with_name("pixel");
 	floor_group.set_texture_with_name("floor");
 	floor_group.set_material_with_name("pixel");
+	let (r, g, b) = hsl_to_rgb(rng.gen(), 0.5, 0.5);
+	group.set_color(r, g, b);
 
 	(walls, group)
 }
