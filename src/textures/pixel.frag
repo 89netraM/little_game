@@ -19,5 +19,5 @@ void main() {
 	float lambertian = max(dot(lightDir, normal), 0.0);
 
 	vec4 tex_color = texture2D(tex, tex_coord_v);
-	gl_FragColor = tex_color * vec4(color + lambertian * 0.1, 1.0);
+	gl_FragColor = tex_color * vec4(color + lambertian - length(vertPos) / 10.0 - lambertian, 1.0);
 }
