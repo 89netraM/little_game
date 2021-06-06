@@ -1,6 +1,6 @@
 use kiss3d::nalgebra::Point3;
 
-use super::MAZE_SIZE_HALF;
+use super::game::MAZE_SIZE_HALF;
 
 const WALL_THICKNESS: f32 = 0.1;
 

@@ -102,6 +102,8 @@ impl Material for PixelMaterial {
 			Context::TEXTURE_MAG_FILTER,
 			Context::NEAREST as i32,
 		);
+		ctx.enable(Context::CULL_FACE);
+		ctx.cull_face(Context::BACK);
 
 		if data.surface_rendering_active() {
 			self.color.upload(data.color());
