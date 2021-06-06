@@ -2,6 +2,7 @@
 
 mod camera;
 mod map;
+mod meshes;
 mod rng;
 mod textures;
 mod wall;
@@ -19,6 +20,7 @@ use rand::{rngs::StdRng, Rng};
 use self::{
 	camera::FirstPerson,
 	map::{Direction, Map, Position, ROOM_CENTER, ROOM_SIZE},
+	meshes::{generate_key, init_meshes},
 	rng::{rand_for_border_walls, rng_for_maze},
 	textures::{hsl_to_rgb, init_textures},
 	wall::Wall,
@@ -29,20 +31,21 @@ fn main() {
 	window.hide_cursor(true);
 	window.set_cursor_grab(true);
 	init_textures();
+	init_meshes();
 
 	let mut camera = FirstPerson::new(Point3::new(0.0, 0.25, 0.0), Point3::new(0.0, 0.25, -1.0));
 
-	let mut cube = window.add_cube(0.5, 0.5, 0.5);
-	cube.set_color(0.0, 1.0, 1.0);
-	cube.append_translation(&Translation3::new(MAZE_SIZE * 2.0, -0.25, MAZE_SIZE * -2.0));
-
 	let seed = 0;
+
+	let mut cube = window.add_group();
+	generate_key(&mut cube, seed, (1, 0));
+	cube.append_translation(&Translation3::new(MAZE_SIZE * 2.0, -0.25, MAZE_SIZE * -2.0));
 
 	let mut chunks = HashMap::new();
 	let mut previous_position = (0, 0);
 	update_chunks(seed, previous_position, &mut window, &mut chunks);
 
-	let rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), 0.014);
+	let rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), 0.05);
 
 	while window.render_with_camera(&mut camera) {
 		cube.prepend_to_local_rotation(&rotation);
@@ -131,6 +134,7 @@ fn add_maze(window: &mut Window, seed: u64, position: (i64, i64)) -> (Vec<Wall>,
 	};
 
 	let mut rng: StdRng = rng_for_maze(seed, position);
+	let (r, g, b) = hsl_to_rgb(rng.gen(), 0.5, 0.5);
 	let map = Map::generate_prim(&mut rng);
 	let mut walls = Vec::new();
 	let mut group = window.add_group();
@@ -236,7 +240,6 @@ fn add_maze(window: &mut Window, seed: u64, position: (i64, i64)) -> (Vec<Wall>,
 	wall_group.set_material_with_name("pixel");
 	floor_group.set_texture_with_name("floor");
 	floor_group.set_material_with_name("pixel");
-	let (r, g, b) = hsl_to_rgb(rng.gen(), 0.5, 0.5);
 	group.set_color(r, g, b);
 
 	(walls, group)
