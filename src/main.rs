@@ -4,12 +4,19 @@ mod camera;
 mod map;
 mod meshes;
 mod rng;
+mod text;
 mod textures;
 mod wall;
 
-use std::{collections::HashMap, f32};
+use std::{collections::HashMap, f32, time::Instant};
 
 use kiss3d::{
+	conrod::{
+		color::Colorable,
+		position::Positionable,
+		widget::{self, Widget},
+		widget_ids,
+	},
 	event::{Action, Key},
 	nalgebra::{Point3, Translation3, UnitQuaternion, Vector3},
 	scene::SceneNode,
@@ -22,6 +29,7 @@ use self::{
 	map::{Direction, Map, Position, ROOM_CENTER, ROOM_SIZE},
 	meshes::{generate_key, init_meshes},
 	rng::{rand_for_border_walls, rng_for_maze},
+	text::generate_name,
 	textures::{hsl_to_rgb, init_textures},
 	wall::Wall,
 };
@@ -47,6 +55,11 @@ fn main() {
 
 	let rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), 0.05);
 
+	let ids = Ids::new(window.conrod_ui_mut().widget_id_generator());
+
+	let mut name = get_section_name(seed, previous_position);
+	let mut text_start = Instant::now();
+
 	while window.render_with_camera(&mut camera) {
 		cube.prepend_to_local_rotation(&rotation);
 
@@ -65,6 +78,9 @@ fn main() {
 			);
 			if position != previous_position {
 				update_chunks(seed, position, &mut window, &mut chunks);
+
+				text_start = Instant::now();
+				name = get_section_name(seed, position);
 			}
 
 			for wall in &chunks.get(&position).unwrap().0 {
@@ -74,7 +90,39 @@ fn main() {
 
 			previous_position = position;
 		}
+
+		let mut ui = window.conrod_ui_mut().set_widgets();
+
+		let text_time = text_start.elapsed().as_secs_f32();
+		if text_time < TEXT_VISIBLE_SECONDS {
+			widget::Text::new(&name)
+				.font_size(50)
+				.rgba(
+					1.0,
+					1.0,
+					1.0,
+					(1.5625 - (2.5 * text_time / TEXT_VISIBLE_SECONDS - 1.25).powi(2)).min(1.0),
+				)
+				.mid_top_with_margin(100.0)
+				.center_justify()
+				.set(ids.section_name, &mut ui);
+		}
 	}
+}
+
+const TEXT_VISIBLE_SECONDS: f32 = 5.0;
+
+widget_ids! {
+	struct Ids {
+		section_name,
+	}
+}
+
+fn get_section_name(seed: u64, position: (i64, i64)) -> String {
+	let mut name = "– ".to_string();
+	generate_name(seed, position, &mut name);
+	name.push_str(" –");
+	name
 }
 
 const CHUNK_RANGE: i64 = 2;

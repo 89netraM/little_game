@@ -10,5 +10,6 @@ edition = "2018"
 opt-level = "z"
 
 [dependencies]
-kiss3d = "0.31.0"
+kiss3d = { version = "0.31.0", features = ["conrod"] }
+phf = { version = "0.8.0", features = ["macros"] }
 rand = "0.8.3"

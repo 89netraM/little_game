@@ -1,5 +1,3 @@
-use super::textures::hsl_to_rgb;
-use rand::{rngs::StdRng, Rng};
 use std::{cell::RefCell, path::Path, rc::Rc};
 
 use kiss3d::{
@@ -8,8 +6,9 @@ use kiss3d::{
 	resource::MeshManager,
 	scene::SceneNode,
 };
+use rand::{rngs::StdRng, Rng};
 
-use super::rng::rng_for_maze;
+use super::{rng::rng_for_maze, textures::hsl_to_rgb};
 
 pub fn init_meshes() {
 	MeshManager::get_global_manager(add_meshes);
@@ -26,8 +25,7 @@ fn add_meshes(manager: &mut MeshManager) {
 	);
 }
 
-pub fn generate_key(parent: &mut SceneNode, seed: u64, position: (i64, i64)) -> SceneNode
-{
+pub fn generate_key(parent: &mut SceneNode, seed: u64, position: (i64, i64)) -> SceneNode {
 	let mut rng: StdRng = rng_for_maze(seed, position);
 	let (r, g, b) = hsl_to_rgb(rng.gen(), 0.5, 0.5);
 
