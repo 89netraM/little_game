@@ -1,4 +1,4 @@
-use std::{collections::HashMap, f32, time::Instant};
+use std::{collections::HashMap, f32};
 
 use kiss3d::{
 	camera::Camera,
@@ -17,6 +17,7 @@ use kiss3d::{
 	window::{State, Window},
 };
 use rand::{rngs::StdRng, Rng};
+use instant::Instant;
 
 use super::{
 	camera::FirstPerson,

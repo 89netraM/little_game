@@ -1,0 +1,25 @@
+{
+	"name": "www",
+	"version": "0.1.0",
+	"author": "Mårten Åsberg",
+	"private": true,
+	"scripts": {
+		"build": "webpack-cli --mode=production",
+		"start": "webpack-cli serve"
+	},
+	"devDependencies": {
+		"css-loader": "^5.2.6",
+		"html-webpack-plugin": "^5.3.1",
+		"node-sass": "^6.0.0",
+		"sass-loader": "^12.0.0",
+		"style-loader": "^2.0.0",
+		"ts-loader": "^9.2.3",
+		"typescript": "^4.3.2",
+		"webpack": "^5.38.1",
+		"webpack-cli": "^4.7.0",
+		"webpack-dev-server": "^3.11.2"
+	},
+	"dependencies": {
+		"little_game": "file:../pkg"
+	}
+}
