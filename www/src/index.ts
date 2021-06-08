@@ -1,5 +1,6 @@
 import "./index.scss";
 import little_game from "little_game";
+import { Game } from "./game";
 
 let canvas: HTMLCanvasElement;
 
@@ -7,6 +8,7 @@ window.addEventListener(
 	"load",
 	async () => {
 		canvas = document.getElementById("canvas") as HTMLCanvasElement;
+		window["game"] = new Game(canvas);
 		updateCanvasSize();
 		await little_game();
 	},

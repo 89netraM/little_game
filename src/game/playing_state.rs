@@ -1,6 +1,8 @@
 use std::{collections::HashMap, f32};
 
 use instant::Instant;
+#[cfg(target_arch = "wasm32")]
+use kiss3d::nalgebra::Vector2;
 use kiss3d::{
 	conrod::{
 		color::Colorable,
@@ -15,6 +17,8 @@ use kiss3d::{
 };
 use rand::{rngs::StdRng, Rng};
 
+#[cfg(target_arch = "wasm32")]
+use super::super::js::{get_cursor_movement, hide_cursor, JsVector2};
 use super::{
 	super::{
 		camera::FirstPerson,
@@ -54,13 +58,30 @@ impl PlayingState {
 
 impl InnerGameState for PlayingState {
 	fn init(&mut self, window: &mut Window) {
-		window.hide_cursor(true);
-		let size = window.size();
-		window.set_cursor_position(size.x as f64 / 2.0, size.y as f64 / 2.0);
+		#[cfg(target_arch = "wasm32")]
+		{
+			hide_cursor(true);
+		}
+		#[cfg(not(target_arch = "wasm32"))]
+		{
+			window.hide_cursor(true);
+			let size = window.size();
+			window.set_cursor_position(size.x as f64 / 2.0, size.y as f64 / 2.0);
+		}
 		update_chunks(self.seed, self.position, window, &mut self.chunks);
 	}
 
 	fn step(&mut self, window: &mut Window) -> Option<Box<dyn InnerGameState>> {
+		#[cfg(target_arch = "wasm32")]
+		{
+			if let Ok(cursor_movement) = get_cursor_movement().into_serde::<JsVector2>() {
+				self.camera.handle_left_button_displacement(&Vector2::new(
+					cursor_movement.x,
+					cursor_movement.y,
+				));
+			}
+		}
+
 		let movement = self.camera.move_dir(
 			window.get_key(Key::W) == Action::Press,
 			window.get_key(Key::S) == Action::Press,
@@ -114,7 +135,14 @@ impl InnerGameState for PlayingState {
 	}
 
 	fn clean(&mut self, window: &mut Window) {
-		window.hide_cursor(false);
+		#[cfg(target_arch = "wasm32")]
+		{
+			hide_cursor(false);
+		}
+		#[cfg(not(target_arch = "wasm32"))]
+		{
+			window.hide_cursor(false);
+		}
 		for (_, (_, mut node)) in self.chunks.drain() {
 			window.remove_node(&mut node);
 		}

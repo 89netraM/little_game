@@ -2,6 +2,7 @@
 
 mod camera;
 mod game;
+mod js;
 mod map;
 mod meshes;
 mod rng;

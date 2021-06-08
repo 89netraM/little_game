@@ -95,7 +95,7 @@ impl FirstPerson {
 		}
 	}
 
-	fn handle_left_button_displacement(&mut self, dpos: &Vector2<f32>) {
+	pub fn handle_left_button_displacement(&mut self, dpos: &Vector2<f32>) {
 		self.yaw += dpos.x * LOOK_STEP;
 		self.pitch += dpos.y * LOOK_STEP;
 
@@ -168,6 +168,7 @@ impl Camera for FirstPerson {
 
 	fn handle_event(&mut self, canvas: &Canvas, event: &WindowEvent) {
 		match *event {
+			#[cfg(not(target_arch = "wasm32"))]
 			WindowEvent::CursorPos(x, y, _) => {
 				let curr_pos = Vector2::new(x as f32, y as f32);
 
