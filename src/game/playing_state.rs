@@ -1,7 +1,7 @@
 use std::{collections::HashMap, f32};
 
+use instant::Instant;
 use kiss3d::{
-	camera::Camera,
 	conrod::{
 		color::Colorable,
 		position::Positionable,
@@ -10,25 +10,25 @@ use kiss3d::{
 	},
 	event::{Action, Key},
 	nalgebra::{Point3, Translation3, UnitQuaternion, Vector3},
-	planar_camera::PlanarCamera,
-	post_processing::PostProcessingEffect,
-	renderer::Renderer,
 	scene::SceneNode,
-	window::{State, Window},
+	window::Window,
 };
 use rand::{rngs::StdRng, Rng};
-use instant::Instant;
 
 use super::{
-	camera::FirstPerson,
-	map::{Direction, Map, Position, ROOM_CENTER, ROOM_SIZE},
-	rng::{rand_for_border_walls, rng_for_maze},
-	text::generate_name,
-	textures::hsl_to_rgb,
+	super::{
+		camera::FirstPerson,
+		map::{Direction, Map, Position, ROOM_CENTER, ROOM_SIZE},
+		rng::{rand_for_border_walls, rng_for_maze},
+		text::generate_name,
+		textures::hsl_to_rgb,
+	},
 	wall::Wall,
+	CamerasEffectRenderer,
+	InnerGameState,
 };
 
-pub struct GameState {
+pub struct PlayingState {
 	camera: FirstPerson,
 	seed: u64,
 	ui_ids: UiIds,
@@ -38,18 +38,13 @@ pub struct GameState {
 	section_name_start_time: Instant,
 }
 
-impl GameState {
-	pub fn new(window: &mut Window) -> Self {
-		let seed = 0;
-		let position = (0, 0);
-		let mut chunks = HashMap::new();
-		update_chunks(seed, position, window, &mut chunks);
-
-		GameState {
+impl PlayingState {
+	pub fn new(window: &mut Window, seed: u64, position: (i64, i64)) -> Self {
+		Self {
 			camera: FirstPerson::new(Point3::new(0.0, 0.25, 0.0), Point3::new(0.0, 0.25, -1.0)),
 			seed,
 			ui_ids: UiIds::new(window.conrod_ui_mut().widget_id_generator()),
-			chunks,
+			chunks: HashMap::new(),
 			position,
 			section_name: get_section_name(seed, position),
 			section_name_start_time: Instant::now(),
@@ -57,8 +52,15 @@ impl GameState {
 	}
 }
 
-impl State for GameState {
-	fn step(&mut self, window: &mut Window) {
+impl InnerGameState for PlayingState {
+	fn init(&mut self, window: &mut Window) {
+		window.hide_cursor(true);
+		let size = window.size();
+		window.set_cursor_position(size.x as f64 / 2.0, size.y as f64 / 2.0);
+		update_chunks(self.seed, self.position, window, &mut self.chunks);
+	}
+
+	fn step(&mut self, window: &mut Window) -> Option<Box<dyn InnerGameState>> {
 		let movement = self.camera.move_dir(
 			window.get_key(Key::W) == Action::Press,
 			window.get_key(Key::S) == Action::Press,
@@ -103,17 +105,19 @@ impl State for GameState {
 				.center_justify()
 				.set(self.ui_ids.section_name, &mut ui);
 		}
+
+		None
 	}
 
-	fn cameras_and_effect_and_renderer(
-		&mut self,
-	) -> (
-		Option<&mut dyn Camera>,
-		Option<&mut dyn PlanarCamera>,
-		Option<&mut dyn Renderer>,
-		Option<&mut dyn PostProcessingEffect>,
-	) {
+	fn cameras_and_effect_and_renderer(&mut self) -> CamerasEffectRenderer {
 		(Some(&mut self.camera), None, None, None)
+	}
+
+	fn clean(&mut self, window: &mut Window) {
+		window.hide_cursor(false);
+		for (_, (_, mut node)) in self.chunks.drain() {
+			window.remove_node(&mut node);
+		}
 	}
 }
 

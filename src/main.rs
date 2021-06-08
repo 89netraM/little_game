@@ -7,19 +7,24 @@ mod meshes;
 mod rng;
 mod text;
 mod textures;
-mod wall;
 
 use kiss3d::window::Window;
 
-use self::{game::GameState, meshes::init_meshes, textures::init_textures};
+use self::{
+	game::{GameState, InnerGameState, MenuState},
+	meshes::init_meshes,
+	textures::init_textures,
+};
+
+pub const GAME_NAME: &str = "Lazer aMAZEing";
 
 fn main() {
-	let mut window = Window::new_with_size("Lazer aMAZEing", 1280, 800);
-	window.hide_cursor(true);
-	window.set_cursor_grab(true);
+	let mut window = Window::new_with_size(GAME_NAME, 1280, 800);
 	init_textures();
 	init_meshes();
 
-	let state = GameState::new(&mut window);
+	let mut menu_state = Box::new(MenuState::new(&mut window));
+	menu_state.init(&mut window);
+	let state = GameState::new(menu_state);
 	window.render_loop(state);
 }
