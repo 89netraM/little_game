@@ -76,7 +76,7 @@ impl FirstPerson {
 		self.update_projviews();
 	}
 
-	fn at(&self) -> Point3<f32> {
+	pub fn at(&self) -> Point3<f32> {
 		let view_eye = self.coord_system.rotation_to_y_up * self.eye;
 		let ax = view_eye.x + self.yaw.cos() * self.pitch.sin();
 		let ay = view_eye.y + self.pitch.cos();

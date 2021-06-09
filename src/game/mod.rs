@@ -1,5 +1,6 @@
 use kiss3d::{
 	camera::Camera,
+	event::{Key, WindowEvent},
 	planar_camera::PlanarCamera,
 	post_processing::PostProcessingEffect,
 	renderer::Renderer,
@@ -7,10 +8,12 @@ use kiss3d::{
 };
 
 mod menu_state;
+mod pause_state;
 mod playing_state;
 mod wall;
 
 pub use menu_state::MenuState;
+pub use pause_state::PauseState;
 pub use playing_state::PlayingState;
 
 pub type CamerasEffectRenderer<'a> = (
@@ -41,6 +44,12 @@ impl GameState {
 
 impl State for GameState {
 	fn step(&mut self, window: &mut Window) {
+		for mut event in window.events().iter() {
+			if let WindowEvent::Key(Key::Escape, _, _) = event.value {
+				event.inhibited = true;
+			}
+		}
+
 		while let Some(new_state) = self.0.step(window) {
 			self.0.clean(window);
 			self.0 = new_state;

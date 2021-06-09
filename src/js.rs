@@ -7,6 +7,8 @@ extern "C" {
 	pub fn hide_cursor(hidden: bool);
 	#[wasm_bindgen(js_namespace = game)]
 	pub fn get_cursor_movement() -> JsValue;
+	#[wasm_bindgen(js_namespace = game)]
+	pub fn get_focus() -> bool;
 }
 
 #[derive(Deserialize)]

@@ -18,7 +18,7 @@ use kiss3d::{
 use rand::{rngs::StdRng, Rng};
 
 #[cfg(target_arch = "wasm32")]
-use super::super::js::{get_cursor_movement, hide_cursor, JsVector2};
+use super::super::js::{get_cursor_movement, get_focus, hide_cursor, JsVector2};
 use super::{
 	super::{
 		camera::FirstPerson,
@@ -42,8 +42,16 @@ pub struct PlayingState {
 	section_name_start_time: Instant,
 }
 
+pub struct SavedPlayingState {
+	camera_eye: Point3<f32>,
+	camera_at: Point3<f32>,
+	seed: u64,
+	position: (i64, i64),
+}
+
 impl PlayingState {
-	pub fn new(window: &mut Window, seed: u64, position: (i64, i64)) -> Self {
+	pub fn new(window: &mut Window, seed: u64) -> Self {
+		let position = (0, 0);
 		Self {
 			camera: FirstPerson::new(Point3::new(0.0, 0.25, 0.0), Point3::new(0.0, 0.25, -1.0)),
 			seed,
@@ -51,6 +59,27 @@ impl PlayingState {
 			chunks: HashMap::new(),
 			position,
 			section_name: get_section_name(seed, position),
+			section_name_start_time: Instant::now(),
+		}
+	}
+
+	pub fn save(&self) -> SavedPlayingState {
+		SavedPlayingState {
+			camera_eye: *self.camera.eye(),
+			camera_at: self.camera.at(),
+			seed: self.seed,
+			position: self.position,
+		}
+	}
+
+	pub fn restore(window: &mut Window, save: &SavedPlayingState) -> Self {
+		Self {
+			camera: FirstPerson::new(save.camera_eye, save.camera_at),
+			seed: save.seed,
+			ui_ids: UiIds::new(window.conrod_ui_mut().widget_id_generator()),
+			chunks: HashMap::new(),
+			position: save.position,
+			section_name: get_section_name(save.seed, save.position),
 			section_name_start_time: Instant::now(),
 		}
 	}
@@ -72,6 +101,15 @@ impl InnerGameState for PlayingState {
 	}
 
 	fn step(&mut self, window: &mut Window) -> Option<Box<dyn InnerGameState>> {
+		#[cfg(target_arch = "wasm32")]
+		if !get_focus() {
+			return Some(Box::new(super::PauseState::new(window, self.save())));
+		}
+		#[cfg(not(target_arch = "wasm32"))]
+		if window.get_key(Key::Escape) == Action::Press {
+			return Some(Box::new(super::PauseState::new(window, self.save())));
+		}
+
 		#[cfg(target_arch = "wasm32")]
 		{
 			if let Ok(cursor_movement) = get_cursor_movement().into_serde::<JsVector2>() {

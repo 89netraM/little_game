@@ -10,24 +10,26 @@ use kiss3d::{
 	window::Window,
 };
 
-use super::{super::GAME_NAME, InnerGameState};
+use super::{super::GAME_NAME, playing_state::SavedPlayingState, InnerGameState};
 
-pub struct MenuState {
+pub struct PauseState {
 	ui_ids: UiIds,
+	playing_state: SavedPlayingState,
 }
 
-impl MenuState {
-	pub fn new(window: &mut Window) -> Self {
+impl PauseState {
+	pub fn new(window: &mut Window, playing_state: SavedPlayingState) -> Self {
 		Self {
 			ui_ids: UiIds::new(window.conrod_ui_mut().widget_id_generator()),
+			playing_state,
 		}
 	}
 }
 
-impl InnerGameState for MenuState {
+impl InnerGameState for PauseState {
 	fn step(&mut self, window: &mut Window) -> Option<Box<dyn InnerGameState>> {
-		let start_clicked;
-		let exit_clicked;
+		let continue_clicked;
+		let menu_clicked;
 		{
 			let mut ui = window.conrod_ui_mut().set_widgets();
 
@@ -38,40 +40,35 @@ impl InnerGameState for MenuState {
 				.center_justify()
 				.set(self.ui_ids.title, &mut ui);
 
-			start_clicked = widget::Button::new()
+			continue_clicked = widget::Button::new()
 				.color(Color::Rgba(0.0, 0.0, 0.0, 0.0))
 				.hover_color(Color::Rgba(0.0, 0.0, 0.0, 0.0))
 				.press_color(Color::Rgba(0.0, 0.0, 0.0, 0.0))
 				.border_color(Color::Rgba(1.0, 1.0, 1.0, 1.0))
-				.label("Start New")
+				.label("Continue")
 				.label_color(Color::Rgba(1.0, 1.0, 1.0, 1.0))
 				.w(200.0)
 				.mid_bottom_with_margin(200.0)
-				.set(self.ui_ids.start_button, &mut ui);
-			exit_clicked = widget::Button::new()
+				.set(self.ui_ids.continue_button, &mut ui);
+			menu_clicked = widget::Button::new()
 				.color(Color::Rgba(0.0, 0.0, 0.0, 0.0))
 				.hover_color(Color::Rgba(0.0, 0.0, 0.0, 0.0))
 				.press_color(Color::Rgba(0.0, 0.0, 0.0, 0.0))
 				.border_color(Color::Rgba(1.0, 1.0, 1.0, 1.0))
-				.label("Exit")
+				.label("Main Menu")
 				.label_color(Color::Rgba(1.0, 1.0, 1.0, 1.0))
 				.w(200.0)
 				.mid_bottom_with_margin(100.0)
-				.set(self.ui_ids.exit_button, &mut ui);
-
-			widget::Text::new("Created by Mårten Åsberg for the 4MB Game Jam")
-				.font_size(12)
-				.color(Color::Rgba(1.0, 1.0, 1.0, 1.0))
-				.mid_bottom_with_margin(10.0)
-				.center_justify()
-				.set(self.ui_ids.credits, &mut ui);
+				.set(self.ui_ids.menu_button, &mut ui);
 		}
 
-		if start_clicked.was_clicked() {
-			Some(Box::new(super::PlayingState::new(window, 0)))
-		} else if exit_clicked.was_clicked() {
-			window.close();
-			None
+		if continue_clicked.was_clicked() {
+			Some(Box::new(super::PlayingState::restore(
+				window,
+				&self.playing_state,
+			)))
+		} else if menu_clicked.was_clicked() {
+			Some(Box::new(super::MenuState::new(window)))
 		} else {
 			None
 		}
@@ -81,8 +78,7 @@ impl InnerGameState for MenuState {
 widget_ids! {
 	struct UiIds {
 		title,
-		start_button,
-		exit_button,
-		credits,
+		continue_button,
+		menu_button,
 	}
 }
