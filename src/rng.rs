@@ -10,12 +10,13 @@ pub fn rng_for_maze<R: SeedableRng>(seed: u64, position: (i64, i64)) -> R {
 	])
 }
 
+const DOOR_ODDS: f32 = 0.8;
 pub fn rand_for_border_walls<R: SeedableRng + Rng>(
 	seed: u64,
 	mut position: (i64, i64),
 	mut direction: Direction,
 	max: usize,
-) -> usize {
+) -> Option<usize> {
 	match direction {
 		Direction::Up if position.1 > 0 => {
 			direction = Direction::Down;
@@ -42,7 +43,11 @@ pub fn rand_for_border_walls<R: SeedableRng + Rng>(
 		&position.1.to_be_bytes(),
 		&[direction as u8],
 	]);
-	rng.gen_range(0..max)
+	if rng.gen::<f32>() < DOOR_ODDS {
+		Some(rng.gen_range(0..max))
+	} else {
+		None
+	}
 }
 
 fn rng_from_bytes<R: SeedableRng>(seeds: &[&[u8]]) -> R {

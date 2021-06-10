@@ -279,7 +279,7 @@ fn add_maze(window: &mut Window, seed: u64, position: (i64, i64)) -> (Vec<Wall>,
 		for col in 0..ROOM_SIZE {
 			let mut grid_group = wall_group.add_group();
 			let pos = Position(row, col);
-			if row == 0 && col != wall_up_opening {
+			if row == 0 && Some(col) != wall_up_opening {
 				let mut quad = create_maze_quad(&mut grid_group);
 				quad.prepend_to_local_rotation(&quarter_turn);
 				quad.append_translation(&MAZE_ABOVE);
@@ -290,7 +290,7 @@ fn add_maze(window: &mut Window, seed: u64, position: (i64, i64)) -> (Vec<Wall>,
 					z_offset + col as f32 * -MAZE_SIZE,
 				)));
 			}
-			if col == 0 && row != wall_left_opening {
+			if col == 0 && Some(row) != wall_left_opening {
 				let mut quad = create_maze_quad(&mut grid_group);
 				quad.prepend_to_local_rotation(&half_turn);
 				quad.append_translation(&MAZE_LEFT);
@@ -302,7 +302,7 @@ fn add_maze(window: &mut Window, seed: u64, position: (i64, i64)) -> (Vec<Wall>,
 				)));
 			}
 			if col + 1 == ROOM_SIZE {
-				if row != wall_right_opening {
+				if Some(row) != wall_right_opening {
 					let mut quad = create_maze_quad(&mut grid_group);
 					quad.append_translation(&MAZE_RIGHT);
 
@@ -323,7 +323,7 @@ fn add_maze(window: &mut Window, seed: u64, position: (i64, i64)) -> (Vec<Wall>,
 				)));
 			}
 			if row + 1 == ROOM_SIZE {
-				if col != wall_down_opening {
+				if Some(col) != wall_down_opening {
 					let mut quad = create_maze_quad(&mut grid_group);
 					quad.prepend_to_local_rotation(&three_quarter_turn);
 					quad.append_translation(&MAZE_BELOW);
