@@ -19,3 +19,4 @@ phf = { version = "0.8.0", features = ["macros"] }
 rand = { version = "0.8.3", default-features = false, features = ["std_rng"] }
 serde = { version = "1.0.126", features = ["derive"] }
 wasm-bindgen = { version = "0.2.74", features = ["serde-serialize"] }
+webbrowser = "0.5.5"
