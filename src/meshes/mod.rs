@@ -10,6 +10,12 @@ use rand::{rngs::StdRng, Rng};
 
 use super::{rng::rng_for_maze, textures::hsl_to_rgb};
 
+const KEY: &str = "key";
+const LOCK: &str = "lock";
+const COIN: &str = "coin";
+
+pub type MeshGenerator = dyn FnOnce(&mut SceneNode) -> SceneNode;
+
 pub fn init_meshes() {
 	MeshManager::get_global_manager(add_meshes);
 }
@@ -17,11 +23,27 @@ pub fn init_meshes() {
 fn add_meshes(manager: &mut MeshManager) {
 	manager.add(
 		Rc::new(RefCell::new(
-			obj::parse(include_str!("./key.obj"), Path::new(""), "key")
+			obj::parse(include_str!("./key.obj"), Path::new(""), KEY)
 				.swap_remove(0)
 				.1,
 		)),
-		"key",
+		KEY,
+	);
+	manager.add(
+		Rc::new(RefCell::new(
+			obj::parse(include_str!("./lock.obj"), Path::new(""), LOCK)
+				.swap_remove(0)
+				.1,
+		)),
+		LOCK,
+	);
+	manager.add(
+		Rc::new(RefCell::new(
+			obj::parse(include_str!("./coin.obj"), Path::new(""), COIN)
+				.swap_remove(0)
+				.1,
+		)),
+		COIN,
 	);
 }
 
@@ -30,7 +52,7 @@ pub fn generate_key(parent: &mut SceneNode, seed: u64, position: (i64, i64)) -> 
 	let (r, g, b) = hsl_to_rgb(rng.gen(), 0.5, 0.5);
 
 	let mut key = parent
-		.add_geom_with_name("key", Vector3::new(1.0, 1.0, 1.0))
+		.add_geom_with_name(KEY, Vector3::new(1.0, 1.0, 1.0))
 		.unwrap();
 	key.prepend_to_local_rotation(&UnitQuaternion::from_axis_angle(
 		&Vector3::x_axis(),
@@ -57,4 +79,16 @@ pub fn generate_key(parent: &mut SceneNode, seed: u64, position: (i64, i64)) -> 
 	key.set_color(r, g, b);
 
 	key
+}
+
+pub fn generate_lock(parent: &mut SceneNode) -> SceneNode {
+	parent
+		.add_geom_with_name(LOCK, Vector3::new(1.0, 1.0, 1.0))
+		.unwrap()
+}
+
+pub fn generate_coin(parent: &mut SceneNode) -> SceneNode {
+	parent
+		.add_geom_with_name(COIN, Vector3::new(1.0, 1.0, 1.0))
+		.unwrap()
 }

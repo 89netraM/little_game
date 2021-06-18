@@ -50,6 +50,38 @@ pub fn rand_for_border_walls<R: SeedableRng + Rng>(
 	}
 }
 
+const ITEM_CHUNK_SIZE: i64 = 5;
+pub fn rng_for_item<R: SeedableRng + Rng>(seed: u64, position: (i64, i64)) -> Positions<R> {
+	let r = position.0 / ITEM_CHUNK_SIZE;
+	let c = position.1 / ITEM_CHUNK_SIZE;
+	Positions {
+		rng: rng_from_bytes(&[&seed.to_be_bytes(), &r.to_be_bytes(), &c.to_be_bytes()]),
+		open_positions: (r * ITEM_CHUNK_SIZE..(r + 1) * ITEM_CHUNK_SIZE)
+			.flat_map(|r| (c * ITEM_CHUNK_SIZE..(c + 1) * ITEM_CHUNK_SIZE).map(move |c| (r, c)))
+			.collect(),
+	}
+}
+
+pub struct Positions<R> {
+	rng: R,
+	open_positions: Vec<(i64, i64)>,
+}
+
+impl<R: Rng> Iterator for Positions<R> {
+	type Item = (i64, i64);
+
+	fn next(&mut self) -> Option<Self::Item> {
+		if self.open_positions.is_empty() {
+			None
+		} else {
+			Some(
+				self.open_positions
+					.swap_remove(self.rng.gen_range(0..self.open_positions.len())),
+			)
+		}
+	}
+}
+
 fn rng_from_bytes<R: SeedableRng>(seeds: &[&[u8]]) -> R {
 	let mut seed = <R as SeedableRng>::Seed::default();
 	let seed_slice = seed.as_mut();
