@@ -51,7 +51,8 @@ pub fn generate_key(parent: &mut SceneNode, seed: u64, position: (i64, i64)) -> 
 	let mut rng: StdRng = rng_for_maze(seed, position);
 	let (r, g, b) = hsl_to_rgb(rng.gen(), 0.5, 0.5);
 
-	let mut key = parent
+	let mut group = parent.add_group();
+	let mut key = group
 		.add_geom_with_name(KEY, Vector3::new(1.0, 1.0, 1.0))
 		.unwrap();
 	key.prepend_to_local_rotation(&UnitQuaternion::from_axis_angle(
@@ -77,18 +78,25 @@ pub fn generate_key(parent: &mut SceneNode, seed: u64, position: (i64, i64)) -> 
 	}
 
 	key.set_color(r, g, b);
+	key.set_material_with_name("pixel");
 
-	key
+	group
 }
 
 pub fn generate_lock(parent: &mut SceneNode) -> SceneNode {
-	parent
-		.add_geom_with_name(LOCK, Vector3::new(1.0, 1.0, 1.0))
-		.unwrap()
+	let mut lock = parent
+		.add_geom_with_name(LOCK, Vector3::new(0.25, 0.25, 0.25))
+		.unwrap();
+	lock.set_color(0.75, 0.84, 0.88);
+	lock.set_material_with_name("pixel");
+	lock
 }
 
 pub fn generate_coin(parent: &mut SceneNode) -> SceneNode {
-	parent
-		.add_geom_with_name(COIN, Vector3::new(1.0, 1.0, 1.0))
-		.unwrap()
+	let mut coin = parent
+		.add_geom_with_name(COIN, Vector3::new(0.1, 0.1, 0.1))
+		.unwrap();
+	coin.set_color(0.99, 0.8, 0.33);
+	coin.set_material_with_name("pixel");
+	coin
 }

@@ -36,6 +36,7 @@ use super::{
 pub struct PlayingState {
 	camera: FirstPerson,
 	seed: u64,
+	start_time: Instant,
 	ui_ids: UiIds,
 	chunks: HashMap<(i64, i64), (Vec<Wall>, SceneNode, SceneNode)>,
 	position: (i64, i64),
@@ -56,6 +57,7 @@ impl PlayingState {
 		Self {
 			camera: FirstPerson::new(Point3::new(0.0, 0.25, 0.0), Point3::new(0.0, 0.25, -1.0)),
 			seed,
+			start_time: Instant::now(),
 			ui_ids: UiIds::new(window.conrod_ui_mut().widget_id_generator()),
 			chunks: HashMap::new(),
 			position,
@@ -77,6 +79,7 @@ impl PlayingState {
 		Self {
 			camera: FirstPerson::new(save.camera_eye, save.camera_at),
 			seed: save.seed,
+			start_time: Instant::now(),
 			ui_ids: UiIds::new(window.conrod_ui_mut().widget_id_generator()),
 			chunks: HashMap::new(),
 			position: save.position,
@@ -147,6 +150,18 @@ impl InnerGameState for PlayingState {
 			self.camera.set_eye(next_camera_eye);
 
 			self.position = position;
+		}
+
+		let item_turn =
+			UnitQuaternion::from_axis_angle(&Vector3::y_axis(), f32::consts::PI / 120.0);
+		let item_float = Translation3::new(
+			0.0,
+			self.start_time.elapsed().as_secs_f32().sin() * 0.0025,
+			0.0,
+		);
+		for (_, (_, _, item)) in self.chunks.iter_mut() {
+			item.prepend_to_local_rotation(&item_turn);
+			item.append_translation(&item_float);
 		}
 
 		let mut ui = window.conrod_ui_mut().set_widgets();
@@ -396,7 +411,7 @@ fn add_maze(
 
 	(walls, group, {
 		let mut item = item_creator.0(window.scene_mut());
-		item.append_translation(&Translation3::new(x_offset, 0.0, z_offset));
+		item.append_translation(&Translation3::new(x_offset, -0.1, z_offset));
 		item.append_translation(&item_translation.unwrap());
 		item
 	})
