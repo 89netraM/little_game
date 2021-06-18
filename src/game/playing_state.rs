@@ -23,8 +23,8 @@ use super::{
 	super::{
 		camera::FirstPerson,
 		map::{Direction, Map, Position, ROOM_CENTER, ROOM_SIZE},
-		meshes::{generate_key, generate_lock, MeshGenerator},
-		rng::{rand_for_border_walls, rng_for_item, rng_for_maze},
+		meshes::{generate_coin, generate_key, generate_lock, MeshGenerator},
+		rng::{rand_for_border_walls, rand_for_key, rng_for_maze},
 		text::generate_name,
 		textures::hsl_to_rgb,
 	},
@@ -37,7 +37,7 @@ pub struct PlayingState {
 	camera: FirstPerson,
 	seed: u64,
 	ui_ids: UiIds,
-	chunks: HashMap<(i64, i64), (Vec<Wall>, SceneNode, Option<SceneNode>)>,
+	chunks: HashMap<(i64, i64), (Vec<Wall>, SceneNode, SceneNode)>,
 	position: (i64, i64),
 	section_name: String,
 	section_name_start_time: Instant,
@@ -182,9 +182,9 @@ impl InnerGameState for PlayingState {
 		{
 			window.hide_cursor(false);
 		}
-		for (_, (_, mut node, item)) in self.chunks.drain() {
+		for (_, (_, mut node, mut item)) in self.chunks.drain() {
 			window.remove_node(&mut node);
-			item.map(|mut i| window.remove_node(&mut i));
+			window.remove_node(&mut item);
 		}
 	}
 }
@@ -210,13 +210,13 @@ fn update_chunks(
 	seed: u64,
 	position: (i64, i64),
 	window: &mut Window,
-	chunks: &mut HashMap<(i64, i64), (Vec<Wall>, SceneNode, Option<SceneNode>)>,
+	chunks: &mut HashMap<(i64, i64), (Vec<Wall>, SceneNode, SceneNode)>,
 ) {
-	for (_, (_, mut node, item)) in chunks
+	for (_, (_, mut node, mut item)) in chunks
 		.drain_filter(|p, _| ((p.0 - position.0).abs() + (p.1 - position.1).abs()) > CHUNK_RANGE)
 	{
 		window.remove_node(&mut node);
-		item.map(|mut i| window.remove_node(&mut i));
+		window.remove_node(&mut item);
 	}
 
 	for y in -CHUNK_RANGE..=CHUNK_RANGE {
@@ -245,7 +245,7 @@ fn add_maze(
 	window: &mut Window,
 	seed: u64,
 	position: (i64, i64),
-) -> (Vec<Wall>, SceneNode, Option<SceneNode>) {
+) -> (Vec<Wall>, SceneNode, SceneNode) {
 	let half_turn = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), f32::consts::PI);
 	let quarter_turn = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), f32::consts::PI / 2.0);
 	let three_quarter_turn =
@@ -282,33 +282,21 @@ fn add_maze(
 	let wall_down_opening =
 		rand_for_border_walls::<StdRng>(seed, position, Direction::Down, ROOM_SIZE);
 
-	let mut item = None;
-	let mut item_creator: Option<(Box<MeshGenerator>, (usize, usize))> = {
-		let mut kind = 0;
-		let mut prev_lock: Option<(i64, i64)> = None;
-		let mut generator: Option<Box<MeshGenerator>> = None;
-		for p in rng_for_item::<StdRng>(seed, position) {
-			if p == position {
-				if kind % 3 == 1 {
-					generator = Some(Box::new(|p| generate_lock(p)));
-				} else if kind % 3 == 2 {
-					if let Some(pl) = prev_lock {
-						generator = Some(Box::new(move |p| generate_key(p, seed, pl)));
-					}
-				}
-				break;
-			}
-			if kind % 3 == 1 {
-				prev_lock = Some(p);
-			}
-			kind = (kind + 1) % 3;
-		}
-		generator.map(|g| {
+	let mut item_translation: Option<Translation3<f32>> = None;
+	let item_creator: (Box<MeshGenerator>, (usize, usize)) = {
+		if position == (0, 0) {
+			(Box::new(generate_lock), (ROOM_CENTER, ROOM_CENTER))
+		} else {
+			let mut rng: StdRng = rng_for_maze(seed, position);
 			(
-				g,
+				if position == rand_for_key::<StdRng>(seed) {
+					Box::new(move |p| generate_key(p, seed, (0, 0)))
+				} else {
+					Box::new(generate_coin)
+				},
 				(rng.gen_range(0..ROOM_SIZE), rng.gen_range(0..ROOM_SIZE)),
 			)
-		})
+		}
 	};
 
 	for row in 0..ROOM_SIZE {
@@ -391,16 +379,10 @@ fn add_maze(
 			ceiling.prepend_to_local_rotation(&ceiling_turn);
 			ceiling.append_translation(&MAZE_CEILING);
 			ceiling.append_translation(&grid_translation);
-			if item_creator.iter().next().map_or(false, |(_, (r, c))| r == &row && c == &col) {
-				if let Some((creator, _)) = item_creator {
-					let mut i = creator(window.scene_mut());
-					i.append_translation(&Translation3::new(x_offset, 0.0, z_offset));
-					i.append_translation(&grid_translation);
-					item = Some(i);
-				}
-				item_creator = None;
-			}
 			grid_group.append_translation(&grid_translation);
+			if item_creator.1 .0 == row && item_creator.1 .1 == col {
+				item_translation = Some(grid_translation);
+			}
 		}
 	}
 
@@ -412,5 +394,10 @@ fn add_maze(
 	floor_group.set_material_with_name("pixel");
 	group.set_color(r, g, b);
 
-	(walls, group, item)
+	(walls, group, {
+		let mut item = item_creator.0(window.scene_mut());
+		item.append_translation(&Translation3::new(x_offset, 0.0, z_offset));
+		item.append_translation(&item_translation.unwrap());
+		item
+	})
 }

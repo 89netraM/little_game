@@ -10,6 +10,15 @@ pub fn rng_for_maze<R: SeedableRng>(seed: u64, position: (i64, i64)) -> R {
 	])
 }
 
+const KEY_DISTANCE: i64 = 2;
+pub fn rand_for_key<R: SeedableRng + Rng>(seed: u64) -> (i64, i64) {
+	let mut rng: R = rng_from_bytes(&[&seed.to_be_bytes()]);
+	(
+		rng.gen_range(1..=KEY_DISTANCE) * if rng.gen() { 1 } else { -1 },
+		rng.gen_range(1..=KEY_DISTANCE) * if rng.gen() { 1 } else { -1 },
+	)
+}
+
 const DOOR_ODDS: f32 = 0.8;
 pub fn rand_for_border_walls<R: SeedableRng + Rng>(
 	seed: u64,
@@ -47,38 +56,6 @@ pub fn rand_for_border_walls<R: SeedableRng + Rng>(
 		Some(rng.gen_range(0..max))
 	} else {
 		None
-	}
-}
-
-const ITEM_CHUNK_SIZE: i64 = 5;
-pub fn rng_for_item<R: SeedableRng + Rng>(seed: u64, position: (i64, i64)) -> Positions<R> {
-	let r = position.0 / ITEM_CHUNK_SIZE;
-	let c = position.1 / ITEM_CHUNK_SIZE;
-	Positions {
-		rng: rng_from_bytes(&[&seed.to_be_bytes(), &r.to_be_bytes(), &c.to_be_bytes()]),
-		open_positions: (r * ITEM_CHUNK_SIZE..(r + 1) * ITEM_CHUNK_SIZE)
-			.flat_map(|r| (c * ITEM_CHUNK_SIZE..(c + 1) * ITEM_CHUNK_SIZE).map(move |c| (r, c)))
-			.collect(),
-	}
-}
-
-pub struct Positions<R> {
-	rng: R,
-	open_positions: Vec<(i64, i64)>,
-}
-
-impl<R: Rng> Iterator for Positions<R> {
-	type Item = (i64, i64);
-
-	fn next(&mut self) -> Option<Self::Item> {
-		if self.open_positions.is_empty() {
-			None
-		} else {
-			Some(
-				self.open_positions
-					.swap_remove(self.rng.gen_range(0..self.open_positions.len())),
-			)
-		}
 	}
 }
 
