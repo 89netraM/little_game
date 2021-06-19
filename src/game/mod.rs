@@ -99,9 +99,9 @@ impl MouseAction {
 	}
 
 	pub fn update(&self, action: &Action) -> Self {
-		if self == &Self::Free && action == &Action::Press {
+		if (self == &Self::Free || self == &Self::Released) && action == &Action::Press {
 			Self::Pressed
-		} else if self == &Self::Held && action == &Action::Release {
+		} else if (self == &Self::Held || self == &Self::Pressed) && action == &Action::Release {
 			Self::Released
 		} else {
 			*self

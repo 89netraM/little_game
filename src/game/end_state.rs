@@ -9,6 +9,7 @@ use kiss3d::{
 	},
 	window::Window,
 };
+use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use super::{super::GAME_NAME, InnerGameState, MouseButtons};
 
@@ -111,7 +112,10 @@ impl InnerGameState for EndState {
 		}
 
 		if play_again_clicked.was_clicked() {
-			Some(Box::new(super::PlayingState::new(window, 0)))
+			Some(Box::new(super::PlayingState::new(
+				window,
+				StdRng::from_entropy().gen(),
+			)))
 		} else if menu_clicked.was_clicked() {
 			Some(Box::new(super::MenuState::new(window)))
 		} else if me_clicked.was_clicked() {

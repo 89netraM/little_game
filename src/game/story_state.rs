@@ -9,6 +9,7 @@ use kiss3d::{
 	event::Key,
 	window::Window,
 };
+use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use super::{InnerGameState, MouseAction, MouseButtons};
 
@@ -73,7 +74,10 @@ impl InnerGameState for StoryState {
 
 		if mouse_buttons.lmb == MouseAction::Pressed || self.space_action == MouseAction::Pressed {
 			if self.page == 0 {
-				Some(Box::new(super::PlayingState::new(window, 0)))
+				Some(Box::new(super::PlayingState::new(
+					window,
+					StdRng::from_entropy().gen(),
+				)))
 			} else {
 				self.page -= 1;
 				self.page_time = Instant::now();

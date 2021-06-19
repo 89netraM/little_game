@@ -13,10 +13,11 @@ opt-level = "z"
 crate-type = ["cdylib"]
 
 [dependencies]
+getrandom = { version = "0.2.3", features = ["js"] }
 instant = { version = "0.1.9", features = ["wasm-bindgen"] }
 kiss3d = { version = "0.31.0", features = ["conrod"] }
 phf = { version = "0.8.0", features = ["macros"] }
-rand = { version = "0.8.3", default-features = false, features = ["std_rng"] }
+rand = { version = "0.8.3", default-features = false, features = ["getrandom", "std_rng"] }
 serde = { version = "1.0.126", features = ["derive"] }
 wasm-bindgen = { version = "0.2.74", features = ["serde-serialize"] }
 webbrowser = "0.5.5"
