@@ -1,4 +1,7 @@
-use std::{collections::HashMap, f32};
+use std::{
+	collections::{HashMap, HashSet},
+	f32,
+};
 
 use instant::Instant;
 #[cfg(target_arch = "wasm32")]
@@ -11,7 +14,7 @@ use kiss3d::{
 		widget_ids,
 	},
 	event::{Action, Key},
-	nalgebra::{Point3, Translation3, UnitQuaternion, Vector3},
+	nalgebra::{distance, Point3, Translation3, UnitQuaternion, Vector3},
 	scene::SceneNode,
 	window::Window,
 };
@@ -23,7 +26,7 @@ use super::{
 	super::{
 		camera::FirstPerson,
 		map::{Direction, Map, Position, ROOM_CENTER, ROOM_SIZE},
-		meshes::{generate_coin, generate_key, generate_lock, MeshGenerator},
+		meshes::{generate_coin, generate_key, generate_lock, ItemKind, MeshGenerator},
 		rng::{rand_for_border_walls, rand_for_key, rng_for_maze},
 		text::generate_name,
 		textures::hsl_to_rgb,
@@ -38,10 +41,12 @@ pub struct PlayingState {
 	seed: u64,
 	start_time: Instant,
 	ui_ids: UiIds,
-	chunks: HashMap<(i64, i64), (Vec<Wall>, SceneNode, SceneNode)>,
+	chunks: HashMap<(i64, i64), (Vec<Wall>, SceneNode, (SceneNode, ItemKind))>,
 	position: (i64, i64),
 	section_name: String,
 	section_name_start_time: Instant,
+	has_key: bool,
+	taken_coins: HashSet<(i64, i64)>,
 }
 
 pub struct SavedPlayingState {
@@ -49,6 +54,8 @@ pub struct SavedPlayingState {
 	camera_at: Point3<f32>,
 	seed: u64,
 	position: (i64, i64),
+	has_key: bool,
+	taken_coins: HashSet<(i64, i64)>,
 }
 
 impl PlayingState {
@@ -63,6 +70,8 @@ impl PlayingState {
 			position,
 			section_name: get_section_name(seed, position),
 			section_name_start_time: Instant::now(),
+			has_key: false,
+			taken_coins: HashSet::new(),
 		}
 	}
 
@@ -72,6 +81,8 @@ impl PlayingState {
 			camera_at: self.camera.at(),
 			seed: self.seed,
 			position: self.position,
+			has_key: self.has_key,
+			taken_coins: self.taken_coins.clone(),
 		}
 	}
 
@@ -85,6 +96,8 @@ impl PlayingState {
 			position: save.position,
 			section_name: get_section_name(save.seed, save.position),
 			section_name_start_time: Instant::now(),
+			has_key: save.has_key,
+			taken_coins: save.taken_coins.clone(),
 		}
 	}
 }
@@ -152,6 +165,8 @@ impl InnerGameState for PlayingState {
 			self.position = position;
 		}
 
+		let mut ui = window.conrod_ui_mut().set_widgets();
+
 		let item_turn =
 			UnitQuaternion::from_axis_angle(&Vector3::y_axis(), f32::consts::PI / 120.0);
 		let item_float = Translation3::new(
@@ -159,12 +174,34 @@ impl InnerGameState for PlayingState {
 			self.start_time.elapsed().as_secs_f32().sin() * 0.0025,
 			0.0,
 		);
-		for (_, (_, _, item)) in self.chunks.iter_mut() {
+		for (pos, (_, _, (item, kind))) in self.chunks.iter_mut() {
 			item.prepend_to_local_rotation(&item_turn);
 			item.append_translation(&item_float);
-		}
 
-		let mut ui = window.conrod_ui_mut().set_widgets();
+			if &self.position == pos {
+				if distance(self.camera.eye(), &{
+					let item_translation = item.data().local_translation();
+					Point3::new(item_translation.x, item_translation.y, item_translation.z)
+				}) < MAZE_SIZE_HALF
+				{
+					let mut text = None;
+					if kind == &ItemKind::Lock && self.has_key {
+						text = Some(widget::Text::new("Press LMB to unlock"));
+					} else if kind == &ItemKind::Key {
+						text = Some(widget::Text::new("Press LMB to collect key"));
+					} else if kind == &ItemKind::Coin {
+						text = Some(widget::Text::new("Press LMB to collect coin"));
+					}
+
+					text.map(|t| t
+						.font_size(20)
+						.rgba(1.0, 1.0, 1.0, 1.0)
+						.bottom_right_with_margin(50.0)
+						.right_justify()
+						.set(self.ui_ids.action_text, &mut ui));
+				}
+			}
+		}
 
 		let text_time = self.section_name_start_time.elapsed().as_secs_f32();
 		if text_time < TEXT_VISIBLE_SECONDS {
@@ -197,7 +234,7 @@ impl InnerGameState for PlayingState {
 		{
 			window.hide_cursor(false);
 		}
-		for (_, (_, mut node, mut item)) in self.chunks.drain() {
+		for (_, (_, mut node, (mut item, _))) in self.chunks.drain() {
 			window.remove_node(&mut node);
 			window.remove_node(&mut item);
 		}
@@ -209,6 +246,7 @@ const TEXT_VISIBLE_SECONDS: f32 = 5.0;
 widget_ids! {
 	struct UiIds {
 		section_name,
+		action_text,
 	}
 }
 
@@ -225,9 +263,9 @@ fn update_chunks(
 	seed: u64,
 	position: (i64, i64),
 	window: &mut Window,
-	chunks: &mut HashMap<(i64, i64), (Vec<Wall>, SceneNode, SceneNode)>,
+	chunks: &mut HashMap<(i64, i64), (Vec<Wall>, SceneNode, (SceneNode, ItemKind))>,
 ) {
-	for (_, (_, mut node, mut item)) in chunks
+	for (_, (_, mut node, (mut item, _))) in chunks
 		.drain_filter(|p, _| ((p.0 - position.0).abs() + (p.1 - position.1).abs()) > CHUNK_RANGE)
 	{
 		window.remove_node(&mut node);
@@ -260,7 +298,7 @@ fn add_maze(
 	window: &mut Window,
 	seed: u64,
 	position: (i64, i64),
-) -> (Vec<Wall>, SceneNode, SceneNode) {
+) -> (Vec<Wall>, SceneNode, (SceneNode, ItemKind)) {
 	let half_turn = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), f32::consts::PI);
 	let quarter_turn = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), f32::consts::PI / 2.0);
 	let three_quarter_turn =
@@ -298,18 +336,28 @@ fn add_maze(
 		rand_for_border_walls::<StdRng>(seed, position, Direction::Down, ROOM_SIZE);
 
 	let mut item_translation: Option<Translation3<f32>> = None;
-	let item_creator: (Box<MeshGenerator>, (usize, usize)) = {
+	let item_creator: (Box<MeshGenerator>, (usize, usize), ItemKind) = {
 		if position == (0, 0) {
-			(Box::new(generate_lock), (ROOM_CENTER, ROOM_CENTER))
+			(
+				Box::new(generate_lock),
+				(ROOM_CENTER, ROOM_CENTER),
+				ItemKind::Lock,
+			)
 		} else {
 			let mut rng: StdRng = rng_for_maze(seed, position);
+			let kind = if position == rand_for_key::<StdRng>(seed) {
+				ItemKind::Key
+			} else {
+				ItemKind::Coin
+			};
 			(
-				if position == rand_for_key::<StdRng>(seed) {
-					Box::new(move |p| generate_key(p, seed, (0, 0)))
-				} else {
-					Box::new(generate_coin)
+				match kind {
+					ItemKind::Key => Box::new(move |p| generate_key(p, seed, (0, 0))),
+					ItemKind::Coin => Box::new(generate_coin),
+					ItemKind::Lock => panic!(),
 				},
 				(rng.gen_range(0..ROOM_SIZE), rng.gen_range(0..ROOM_SIZE)),
+				kind,
 			)
 		}
 	};
@@ -413,6 +461,6 @@ fn add_maze(
 		let mut item = item_creator.0(window.scene_mut());
 		item.append_translation(&Translation3::new(x_offset, -0.1, z_offset));
 		item.append_translation(&item_translation.unwrap());
-		item
+		(item, item_creator.2)
 	})
 }
