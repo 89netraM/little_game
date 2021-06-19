@@ -7,11 +7,13 @@ use kiss3d::{
 	window::{State, Window},
 };
 
+mod end_state;
 mod menu_state;
 mod pause_state;
 mod playing_state;
 mod wall;
 
+pub use end_state::EndState;
 pub use menu_state::MenuState;
 pub use pause_state::PauseState;
 pub use playing_state::PlayingState;

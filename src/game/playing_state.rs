@@ -210,8 +210,10 @@ impl InnerGameState for PlayingState {
 					let lmb_pressed = mouse_buttons.lmb == MouseAction::Pressed;
 					if kind == &ItemKind::Lock && self.has_key {
 						if lmb_pressed {
-							// TODO: Move to end screen!
-							return Some(Box::new(super::MenuState::new(window)));
+							return Some(Box::new(super::EndState::new(
+								window,
+								self.collected_items.len() - self.has_key as usize,
+							)));
 						} else {
 							action_text = Some("Press LMB to unlock and escape");
 						}
