@@ -94,7 +94,7 @@ impl InnerGameState for MenuState {
 		}
 
 		if start_clicked.was_clicked() {
-			Some(Box::new(super::PlayingState::new(window, 0)))
+			Some(Box::new(super::StoryState::new(window)))
 		} else if exit_clicked.was_clicked() {
 			window.close();
 			None

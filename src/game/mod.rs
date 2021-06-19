@@ -11,12 +11,14 @@ mod end_state;
 mod menu_state;
 mod pause_state;
 mod playing_state;
+mod story_state;
 mod wall;
 
 pub use end_state::EndState;
 pub use menu_state::MenuState;
 pub use pause_state::PauseState;
 pub use playing_state::PlayingState;
+pub use story_state::StoryState;
 
 pub type CamerasEffectRenderer<'a> = (
 	Option<&'a mut dyn Camera>,
@@ -86,7 +88,7 @@ pub enum MouseAction {
 }
 
 impl MouseAction {
-	fn step(&self) -> Self {
+	pub fn step(&self) -> Self {
 		if self == &Self::Pressed {
 			Self::Held
 		} else if self == &Self::Released {
@@ -96,11 +98,13 @@ impl MouseAction {
 		}
 	}
 
-	fn update(&self, action: &Action) -> Self {
-		if action == &Action::Press {
+	pub fn update(&self, action: &Action) -> Self {
+		if self == &Self::Free && action == &Action::Press {
 			Self::Pressed
-		} else {
+		} else if self == &Self::Held && action == &Action::Release {
 			Self::Released
+		} else {
+			*self
 		}
 	}
 }
