@@ -10,7 +10,7 @@ pub fn rng_for_maze<R: SeedableRng>(seed: u64, position: (i64, i64)) -> R {
 	])
 }
 
-const KEY_DISTANCE: i64 = 2;
+const KEY_DISTANCE: i64 = 1;
 pub fn rand_for_key<R: SeedableRng + Rng>(seed: u64) -> (i64, i64) {
 	let mut rng: R = rng_from_bytes(&[&seed.to_be_bytes()]);
 	(

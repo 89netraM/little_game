@@ -67,7 +67,7 @@ impl State for GameState {
 			}
 		}
 
-		while let Some(new_state) = self.inner_state.step(window, &self.mouse_buttons) {
+		if let Some(new_state) = self.inner_state.step(window, &self.mouse_buttons) {
 			self.inner_state.clean(window);
 			self.inner_state = new_state;
 			self.inner_state.init(window);
