@@ -34,19 +34,23 @@ use super::{
 	wall::Wall,
 	CamerasEffectRenderer,
 	InnerGameState,
+	MouseAction,
+	MouseButtons,
 };
+
+type Chunks = HashMap<(i64, i64), (Vec<Wall>, SceneNode, Option<(SceneNode, ItemKind)>)>;
 
 pub struct PlayingState {
 	camera: FirstPerson,
 	seed: u64,
 	start_time: Instant,
 	ui_ids: UiIds,
-	chunks: HashMap<(i64, i64), (Vec<Wall>, SceneNode, (SceneNode, ItemKind))>,
+	chunks: Chunks,
 	position: (i64, i64),
 	section_name: String,
 	section_name_start_time: Instant,
 	has_key: bool,
-	taken_coins: HashSet<(i64, i64)>,
+	collected_items: HashSet<(i64, i64)>,
 }
 
 pub struct SavedPlayingState {
@@ -55,7 +59,7 @@ pub struct SavedPlayingState {
 	seed: u64,
 	position: (i64, i64),
 	has_key: bool,
-	taken_coins: HashSet<(i64, i64)>,
+	collected_items: HashSet<(i64, i64)>,
 }
 
 impl PlayingState {
@@ -71,7 +75,7 @@ impl PlayingState {
 			section_name: get_section_name(seed, position),
 			section_name_start_time: Instant::now(),
 			has_key: false,
-			taken_coins: HashSet::new(),
+			collected_items: HashSet::new(),
 		}
 	}
 
@@ -82,7 +86,7 @@ impl PlayingState {
 			seed: self.seed,
 			position: self.position,
 			has_key: self.has_key,
-			taken_coins: self.taken_coins.clone(),
+			collected_items: self.collected_items.clone(),
 		}
 	}
 
@@ -97,7 +101,7 @@ impl PlayingState {
 			section_name: get_section_name(save.seed, save.position),
 			section_name_start_time: Instant::now(),
 			has_key: save.has_key,
-			taken_coins: save.taken_coins.clone(),
+			collected_items: save.collected_items.clone(),
 		}
 	}
 }
@@ -114,10 +118,20 @@ impl InnerGameState for PlayingState {
 			let size = window.size();
 			window.set_cursor_position(size.x as f64 / 2.0, size.y as f64 / 2.0);
 		}
-		update_chunks(self.seed, self.position, window, &mut self.chunks);
+		update_chunks(
+			self.seed,
+			self.position,
+			window,
+			&mut self.chunks,
+			&self.collected_items,
+		);
 	}
 
-	fn step(&mut self, window: &mut Window) -> Option<Box<dyn InnerGameState>> {
+	fn step(
+		&mut self,
+		window: &mut Window,
+		mouse_buttons: &MouseButtons,
+	) -> Option<Box<dyn InnerGameState>> {
 		#[cfg(target_arch = "wasm32")]
 		if !get_focus() {
 			return Some(Box::new(super::PauseState::new(window, self.save())));
@@ -151,7 +165,13 @@ impl InnerGameState for PlayingState {
 				(self.camera.eye().x / MAZE_SIZE / ROOM_SIZE as f32).round() as i64,
 			);
 			if position != self.position {
-				update_chunks(self.seed, position, window, &mut self.chunks);
+				update_chunks(
+					self.seed,
+					position,
+					window,
+					&mut self.chunks,
+					&self.collected_items,
+				);
 
 				self.section_name_start_time = Instant::now();
 				self.section_name = get_section_name(self.seed, position);
@@ -165,8 +185,6 @@ impl InnerGameState for PlayingState {
 			self.position = position;
 		}
 
-		let mut ui = window.conrod_ui_mut().set_widgets();
-
 		let item_turn =
 			UnitQuaternion::from_axis_angle(&Vector3::y_axis(), f32::consts::PI / 120.0);
 		let item_float = Translation3::new(
@@ -174,34 +192,52 @@ impl InnerGameState for PlayingState {
 			self.start_time.elapsed().as_secs_f32().sin() * 0.0025,
 			0.0,
 		);
-		for (pos, (_, _, (item, kind))) in self.chunks.iter_mut() {
-			item.prepend_to_local_rotation(&item_turn);
-			item.append_translation(&item_float);
+		for item in self.chunks.iter_mut() {
+			if let Some((i, _)) = &mut item.1 .2 {
+				i.prepend_to_local_rotation(&item_turn);
+				i.append_translation(&item_float);
+			}
+		}
 
-			if &self.position == pos {
+		let mut action_text = None;
+		if let Some((_, _, elem)) = self.chunks.get_mut(&self.position) {
+			if let Some((item, kind)) = elem {
 				if distance(self.camera.eye(), &{
 					let item_translation = item.data().local_translation();
 					Point3::new(item_translation.x, item_translation.y, item_translation.z)
 				}) < MAZE_SIZE_HALF
 				{
-					let mut text = None;
+					let lmb_pressed = mouse_buttons.lmb == MouseAction::Pressed;
 					if kind == &ItemKind::Lock && self.has_key {
-						text = Some(widget::Text::new("Press LMB to unlock"));
+						if lmb_pressed {
+							// TODO: Move to end screen!
+							return Some(Box::new(super::MenuState::new(window)));
+						} else {
+							action_text = Some("Press LMB to unlock and escape");
+						}
 					} else if kind == &ItemKind::Key {
-						text = Some(widget::Text::new("Press LMB to collect key"));
+						if lmb_pressed {
+							self.has_key = true;
+							self.collected_items.insert(self.position);
+							window.remove_node(item);
+							*elem = None;
+						} else {
+							action_text = Some("Press LMB to collect key");
+						}
 					} else if kind == &ItemKind::Coin {
-						text = Some(widget::Text::new("Press LMB to collect coin"));
+						if lmb_pressed {
+							self.collected_items.insert(self.position);
+							window.remove_node(item);
+							*elem = None;
+						} else {
+							action_text = Some("Press LMB to collect coin");
+						}
 					}
-
-					text.map(|t| t
-						.font_size(20)
-						.rgba(1.0, 1.0, 1.0, 1.0)
-						.bottom_right_with_margin(50.0)
-						.right_justify()
-						.set(self.ui_ids.action_text, &mut ui));
 				}
 			}
 		}
+
+		let mut ui = window.conrod_ui_mut().set_widgets();
 
 		let text_time = self.section_name_start_time.elapsed().as_secs_f32();
 		if text_time < TEXT_VISIBLE_SECONDS {
@@ -216,6 +252,32 @@ impl InnerGameState for PlayingState {
 				.mid_top_with_margin(100.0)
 				.center_justify()
 				.set(self.ui_ids.section_name, &mut ui);
+		}
+
+		if let Some(t) = action_text {
+			widget::Text::new(t)
+				.font_size(20)
+				.rgba(1.0, 1.0, 1.0, 1.0)
+				.bottom_right_with_margin(50.0)
+				.right_justify()
+				.set(self.ui_ids.action_text, &mut ui)
+		}
+
+		widget::Text::new(&format!(
+			"Coins collected: {}",
+			self.collected_items.len() - self.has_key as usize
+		))
+		.font_size(20)
+		.rgba(1.0, 1.0, 1.0, 1.0)
+		.bottom_left_with_margin(50.0)
+		.set(self.ui_ids.coins_collected_text, &mut ui);
+
+		if self.has_key {
+			widget::Text::new("Carrying key")
+				.font_size(20)
+				.rgba(1.0, 1.0, 1.0, 1.0)
+				.top_left_with_margins_on(self.ui_ids.coins_collected_text, -25.0, 0.0)
+				.set(self.ui_ids.carrying_key_text, &mut ui);
 		}
 
 		None
@@ -234,9 +296,11 @@ impl InnerGameState for PlayingState {
 		{
 			window.hide_cursor(false);
 		}
-		for (_, (_, mut node, (mut item, _))) in self.chunks.drain() {
+		for (_, (_, mut node, item)) in self.chunks.drain() {
 			window.remove_node(&mut node);
-			window.remove_node(&mut item);
+			if let Some((mut i, _)) = item {
+				window.remove_node(&mut i);
+			}
 		}
 	}
 }
@@ -246,6 +310,8 @@ const TEXT_VISIBLE_SECONDS: f32 = 5.0;
 widget_ids! {
 	struct UiIds {
 		section_name,
+		coins_collected_text,
+		carrying_key_text,
 		action_text,
 	}
 }
@@ -263,22 +329,25 @@ fn update_chunks(
 	seed: u64,
 	position: (i64, i64),
 	window: &mut Window,
-	chunks: &mut HashMap<(i64, i64), (Vec<Wall>, SceneNode, (SceneNode, ItemKind))>,
+	chunks: &mut Chunks,
+	collected_items: &HashSet<(i64, i64)>,
 ) {
-	for (_, (_, mut node, (mut item, _))) in chunks
+	for (_, (_, mut node, item)) in chunks
 		.drain_filter(|p, _| ((p.0 - position.0).abs() + (p.1 - position.1).abs()) > CHUNK_RANGE)
 	{
 		window.remove_node(&mut node);
-		window.remove_node(&mut item);
+		if let Some((mut i, _)) = item {
+			window.remove_node(&mut i);
+		}
 	}
 
 	for y in -CHUNK_RANGE..=CHUNK_RANGE {
 		let width = CHUNK_RANGE - y.abs();
 		for x in -width..=width {
 			let position = (position.0 + x, position.1 + y);
-			chunks
-				.entry(position)
-				.or_insert_with(|| add_maze(window, seed, position));
+			chunks.entry(position).or_insert_with(|| {
+				add_maze(window, seed, position, !collected_items.contains(&position))
+			});
 		}
 	}
 }
@@ -298,7 +367,8 @@ fn add_maze(
 	window: &mut Window,
 	seed: u64,
 	position: (i64, i64),
-) -> (Vec<Wall>, SceneNode, (SceneNode, ItemKind)) {
+	should_add_item: bool,
+) -> (Vec<Wall>, SceneNode, Option<(SceneNode, ItemKind)>) {
 	let half_turn = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), f32::consts::PI);
 	let quarter_turn = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), f32::consts::PI / 2.0);
 	let three_quarter_turn =
@@ -336,29 +406,33 @@ fn add_maze(
 		rand_for_border_walls::<StdRng>(seed, position, Direction::Down, ROOM_SIZE);
 
 	let mut item_translation: Option<Translation3<f32>> = None;
-	let item_creator: (Box<MeshGenerator>, (usize, usize), ItemKind) = {
-		if position == (0, 0) {
-			(
-				Box::new(generate_lock),
-				(ROOM_CENTER, ROOM_CENTER),
-				ItemKind::Lock,
-			)
-		} else {
-			let mut rng: StdRng = rng_for_maze(seed, position);
-			let kind = if position == rand_for_key::<StdRng>(seed) {
-				ItemKind::Key
+	let item_creator: Option<(Box<MeshGenerator>, (usize, usize), ItemKind)> = {
+		if should_add_item {
+			if position == (0, 0) {
+				Some((
+					Box::new(generate_lock),
+					(ROOM_CENTER, ROOM_CENTER),
+					ItemKind::Lock,
+				))
 			} else {
-				ItemKind::Coin
-			};
-			(
-				match kind {
-					ItemKind::Key => Box::new(move |p| generate_key(p, seed, (0, 0))),
-					ItemKind::Coin => Box::new(generate_coin),
-					ItemKind::Lock => panic!(),
-				},
-				(rng.gen_range(0..ROOM_SIZE), rng.gen_range(0..ROOM_SIZE)),
-				kind,
-			)
+				let mut rng: StdRng = rng_for_maze(seed, position);
+				let kind = if position == rand_for_key::<StdRng>(seed) {
+					ItemKind::Key
+				} else {
+					ItemKind::Coin
+				};
+				Some((
+					match kind {
+						ItemKind::Key => Box::new(move |p| generate_key(p, seed, (0, 0))),
+						ItemKind::Coin => Box::new(generate_coin),
+						ItemKind::Lock => panic!(),
+					},
+					(rng.gen_range(0..ROOM_SIZE), rng.gen_range(0..ROOM_SIZE)),
+					kind,
+				))
+			}
+		} else {
+			None
 		}
 	};
 
@@ -443,7 +517,11 @@ fn add_maze(
 			ceiling.append_translation(&MAZE_CEILING);
 			ceiling.append_translation(&grid_translation);
 			grid_group.append_translation(&grid_translation);
-			if item_creator.1 .0 == row && item_creator.1 .1 == col {
+			if item_creator
+				.iter()
+				.next()
+				.map_or(false, |ic| ic.1 .0 == row && ic.1 .1 == col)
+			{
 				item_translation = Some(grid_translation);
 			}
 		}
@@ -457,10 +535,14 @@ fn add_maze(
 	floor_group.set_material_with_name("pixel");
 	group.set_color(r, g, b);
 
-	(walls, group, {
-		let mut item = item_creator.0(window.scene_mut());
-		item.append_translation(&Translation3::new(x_offset, -0.1, z_offset));
-		item.append_translation(&item_translation.unwrap());
-		(item, item_creator.2)
-	})
+	(
+		walls,
+		group,
+		item_creator.map(|ic| {
+			let mut item = ic.0(window.scene_mut());
+			item.append_translation(&Translation3::new(x_offset, -0.1, z_offset));
+			item.append_translation(&item_translation.unwrap());
+			(item, ic.2)
+		}),
+	)
 }

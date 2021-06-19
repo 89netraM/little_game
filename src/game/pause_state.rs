@@ -10,7 +10,7 @@ use kiss3d::{
 	window::Window,
 };
 
-use super::{super::GAME_NAME, playing_state::SavedPlayingState, InnerGameState};
+use super::{super::GAME_NAME, playing_state::SavedPlayingState, InnerGameState, MouseButtons};
 
 pub struct PauseState {
 	ui_ids: UiIds,
@@ -27,7 +27,7 @@ impl PauseState {
 }
 
 impl InnerGameState for PauseState {
-	fn step(&mut self, window: &mut Window) -> Option<Box<dyn InnerGameState>> {
+	fn step(&mut self, window: &mut Window, _: &MouseButtons) -> Option<Box<dyn InnerGameState>> {
 		let continue_clicked;
 		let menu_clicked;
 		let me_clicked;

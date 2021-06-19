@@ -10,7 +10,7 @@ use kiss3d::{
 	window::Window,
 };
 
-use super::{super::GAME_NAME, InnerGameState};
+use super::{super::GAME_NAME, InnerGameState, MouseButtons};
 
 pub struct MenuState {
 	ui_ids: UiIds,
@@ -25,7 +25,7 @@ impl MenuState {
 }
 
 impl InnerGameState for MenuState {
-	fn step(&mut self, window: &mut Window) -> Option<Box<dyn InnerGameState>> {
+	fn step(&mut self, window: &mut Window, _: &MouseButtons) -> Option<Box<dyn InnerGameState>> {
 		let start_clicked;
 		let exit_clicked;
 		let me_clicked;

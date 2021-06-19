@@ -16,6 +16,13 @@ const COIN: &str = "coin";
 
 pub type MeshGenerator = dyn FnOnce(&mut SceneNode) -> SceneNode;
 
+#[derive(PartialEq, Eq)]
+pub enum ItemKind {
+	Key,
+	Lock,
+	Coin,
+}
+
 pub fn init_meshes() {
 	MeshManager::get_global_manager(add_meshes);
 }
