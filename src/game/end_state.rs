@@ -63,19 +63,19 @@ impl InnerGameState for EndState {
 				.mid_bottom_with_margin(100.0)
 				.set(self.ui_ids.menu_button, &mut ui);
 
-			widget::Text::new(
-				&(if self.coins == 0 {
-					"You escaped and collected 0 coins...".to_string()
-				} else if self.coins == 1 {
-					"You escaped and collected 1 coin!".to_string()
-				} else {
-					format!("You escaped and collected {} coins!", self.coins)
-				}),
-			)
+			widget::Text::new(if self.coins == 0 {
+				"At least you made it back alive Agent"
+			} else if self.coins == 1 {
+				"Glad to have you back Agent!\nAnd a coin sure doesn't hurt either."
+			} else if self.coins <= 5 {
+				"Glad to have you back Agent!\nAnd these coins sure doesn't hurt either."
+			} else {
+				"I'm happy to have you back but,\nyou shouldn't risk your life for these coins \
+				 Agent!"
+			})
 			.font_size(24)
 			.color(Color::Rgba(1.0, 1.0, 1.0, 1.0))
 			.middle()
-			.center_justify()
 			.set(self.ui_ids.results_text, &mut ui);
 
 			widget::Text::new("Created by")
