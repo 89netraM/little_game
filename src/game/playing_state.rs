@@ -265,10 +265,14 @@ impl InnerGameState for PlayingState {
 				.set(self.ui_ids.action_text, &mut ui)
 		}
 
-		widget::Text::new(&format!(
-			"Coins collected: {}",
-			self.collected_items.len() - self.has_key as usize
-		))
+		widget::Text::new(&{
+			let coins = self.collected_items.len() - self.has_key as usize;
+			if coins == 0 {
+				"".to_string()
+			} else {
+				format!("Coins collected: {}", coins)
+			}
+		})
 		.font_size(20)
 		.rgba(1.0, 1.0, 1.0, 1.0)
 		.bottom_left_with_margin(50.0)
