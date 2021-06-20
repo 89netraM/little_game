@@ -13,6 +13,7 @@ fn add_textures(manager: &mut TextureManager) {
 	manager.add_image_from_memory(include_bytes!("./wall.png"), "wall");
 	manager.add_image_from_memory(include_bytes!("./ceiling.png"), "ceiling");
 	manager.add_image_from_memory(include_bytes!("./floor.png"), "floor");
+	manager.add_image_from_memory(include_bytes!("./monster.png"), "monster");
 }
 
 pub fn hsl_to_rgb(h: f32, s: f32, l: f32) -> (f32, f32, f32) {

@@ -104,6 +104,7 @@ impl Material for PixelMaterial {
 		);
 		ctx.enable(Context::CULL_FACE);
 		ctx.cull_face(Context::BACK);
+		ctx.enable(Context::BLEND);
 
 		if data.surface_rendering_active() {
 			self.color.upload(data.color());

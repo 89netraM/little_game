@@ -9,6 +9,7 @@ use kiss3d::{
 
 mod end_state;
 mod menu_state;
+mod monster;
 mod pause_state;
 mod playing_state;
 mod story_state;

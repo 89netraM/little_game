@@ -31,6 +31,7 @@ use super::{
 		text::generate_name,
 		textures::hsl_to_rgb,
 	},
+	monster::Monster,
 	wall::Wall,
 	CamerasEffectRenderer,
 	InnerGameState,
@@ -38,7 +39,15 @@ use super::{
 	MouseButtons,
 };
 
-type Chunks = HashMap<(i64, i64), (Vec<Wall>, SceneNode, Option<(SceneNode, ItemKind)>)>;
+type Chunks = HashMap<
+	(i64, i64),
+	(
+		Vec<Wall>,
+		SceneNode,
+		Option<(SceneNode, ItemKind)>,
+		Vec<(SceneNode, Monster)>,
+	),
+>;
 
 pub struct PlayingState {
 	camera: FirstPerson,
@@ -197,10 +206,21 @@ impl InnerGameState for PlayingState {
 				i.prepend_to_local_rotation(&item_turn);
 				i.append_translation(&item_float);
 			}
+
+			for (node, monster) in item.1 .3.iter_mut() {
+				node.set_visible(monster.update(distance(self.camera.eye(), &{
+					let monster_translation = node.data().local_translation();
+					Point3::new(
+						monster_translation.x,
+						monster_translation.y,
+						monster_translation.z,
+					)
+				})));
+			}
 		}
 
 		let mut action_text = None;
-		if let Some((_, _, elem)) = self.chunks.get_mut(&self.position) {
+		if let Some((_, _, elem, _)) = self.chunks.get_mut(&self.position) {
 			if let Some((item, kind)) = elem {
 				if distance(self.camera.eye(), &{
 					let item_translation = item.data().local_translation();
@@ -302,10 +322,13 @@ impl InnerGameState for PlayingState {
 		{
 			window.hide_cursor(false);
 		}
-		for (_, (_, mut node, item)) in self.chunks.drain() {
+		for (_, (_, mut node, item, monsters)) in self.chunks.drain() {
 			window.remove_node(&mut node);
 			if let Some((mut i, _)) = item {
 				window.remove_node(&mut i);
+			}
+			for (mut node, _) in monsters {
+				window.remove_node(&mut node);
 			}
 		}
 	}
@@ -338,12 +361,15 @@ fn update_chunks(
 	chunks: &mut Chunks,
 	collected_items: &HashSet<(i64, i64)>,
 ) {
-	for (_, (_, mut node, item)) in chunks
+	for (_, (_, mut node, item, monsters)) in chunks
 		.drain_filter(|p, _| ((p.0 - position.0).abs() + (p.1 - position.1).abs()) > CHUNK_RANGE)
 	{
 		window.remove_node(&mut node);
 		if let Some((mut i, _)) = item {
 			window.remove_node(&mut i);
+		}
+		for (mut node, _) in monsters {
+			window.remove_node(&mut node);
 		}
 	}
 
@@ -361,6 +387,7 @@ fn update_chunks(
 const MAZE_HEIGHT: f32 = 2.0;
 pub const MAZE_SIZE: f32 = 1.75;
 pub const MAZE_SIZE_HALF: f32 = MAZE_SIZE / 2.0;
+pub const MAZE_CHUNK_SIZE: f32 = (ROOM_SIZE as f32 + 0.5) * MAZE_SIZE;
 const MAZE_OFFSET: f32 = ROOM_CENTER as f32 * -MAZE_SIZE;
 const MAZE_ABOVE: Translation3<f32> = Translation3::new(-MAZE_SIZE_HALF, 0.0, 0.0);
 const MAZE_LEFT: Translation3<f32> = Translation3::new(0.0, 0.0, MAZE_SIZE_HALF);
@@ -368,13 +395,19 @@ const MAZE_RIGHT: Translation3<f32> = Translation3::new(0.0, 0.0, -MAZE_SIZE_HAL
 const MAZE_BELOW: Translation3<f32> = Translation3::new(MAZE_SIZE_HALF, 0.0, 0.0);
 const MAZE_FLOOR: Translation3<f32> = Translation3::new(0.0, -MAZE_HEIGHT / 2.0, 0.0);
 const MAZE_CEILING: Translation3<f32> = Translation3::new(0.0, MAZE_HEIGHT / 2.0, 0.0);
+const MONSTER_DISTANCE: f32 = 5.0;
 
 fn add_maze(
 	window: &mut Window,
 	seed: u64,
 	position: (i64, i64),
 	should_add_item: bool,
-) -> (Vec<Wall>, SceneNode, Option<(SceneNode, ItemKind)>) {
+) -> (
+	Vec<Wall>,
+	SceneNode,
+	Option<(SceneNode, ItemKind)>,
+	Vec<(SceneNode, Monster)>,
+) {
 	let half_turn = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), f32::consts::PI);
 	let quarter_turn = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), f32::consts::PI / 2.0);
 	let three_quarter_turn =
@@ -393,6 +426,16 @@ fn add_maze(
 		quad2.prepend_to_local_rotation(&half_turn);
 		quad
 	};
+	let create_monster_quad = |window: &mut Window| -> SceneNode {
+		let mut quad = window.add_quad(MAZE_SIZE * 0.408, MAZE_HEIGHT * 0.861, 1, 1);
+		let mut quad2 = quad.add_quad(MAZE_SIZE * 0.408, MAZE_HEIGHT * 0.861, 1, 1);
+		quad2.prepend_to_local_rotation(&half_turn);
+		quad.set_texture_with_name("monster");
+		quad.set_material_with_name("pixel");
+		quad.append_translation(&Translation3::new(x_offset, 0.0, z_offset));
+		quad.set_visible(false);
+		quad
+	};
 
 	let mut rng: StdRng = rng_for_maze(seed, position);
 	let (r, g, b) = hsl_to_rgb(rng.gen(), 0.5, 0.5);
@@ -403,6 +446,7 @@ fn add_maze(
 	let mut ceiling_group = group.add_group();
 	let mut wall_group = group.add_group();
 	let mut floor_group = group.add_group();
+	let mut monsters = Vec::new();
 	let wall_up_opening = rand_for_border_walls::<StdRng>(seed, position, Direction::Up, ROOM_SIZE);
 	let wall_left_opening =
 		rand_for_border_walls::<StdRng>(seed, position, Direction::Left, ROOM_SIZE);
@@ -446,6 +490,8 @@ fn add_maze(
 		for col in 0..ROOM_SIZE {
 			let mut grid_group = wall_group.add_group();
 			let pos = Position(row, col);
+			let grid_translation =
+				Translation3::new(row as f32 * MAZE_SIZE, 0.0, col as f32 * -MAZE_SIZE);
 			if row == 0 && Some(col) != wall_up_opening {
 				let mut quad = create_maze_quad(&mut grid_group);
 				quad.prepend_to_local_rotation(&quarter_turn);
@@ -488,6 +534,14 @@ fn add_maze(
 					0.0,
 					z_offset + col as f32 * -MAZE_SIZE - MAZE_SIZE_HALF,
 				)));
+			} else if rng.gen::<f32>()
+				< ((position.0 as f32).powi(2) + (position.1 as f32).powi(2)).sqrt()
+					/ MONSTER_DISTANCE
+			{
+				let mut monster = create_monster_quad(window);
+				monster.append_translation(&MAZE_RIGHT);
+				monster.append_translation(&grid_translation);
+				monsters.push((monster, Monster::default()));
 			}
 			if row + 1 == ROOM_SIZE {
 				if Some(col) != wall_down_opening {
@@ -511,9 +565,16 @@ fn add_maze(
 					0.0,
 					z_offset + col as f32 * -MAZE_SIZE,
 				)));
+			} else if rng.gen::<f32>()
+				< ((position.0 as f32).powi(2) + (position.1 as f32).powi(2)).sqrt()
+					/ MONSTER_DISTANCE
+			{
+				let mut monster = create_monster_quad(window);
+				monster.prepend_to_local_rotation(&three_quarter_turn);
+				monster.append_translation(&MAZE_BELOW);
+				monster.append_translation(&grid_translation);
+				monsters.push((monster, Monster::default()));
 			}
-			let grid_translation =
-				Translation3::new(row as f32 * MAZE_SIZE, 0.0, col as f32 * -MAZE_SIZE);
 			let mut floor = floor_group.add_quad(MAZE_SIZE, MAZE_SIZE, 1, 1);
 			floor.prepend_to_local_rotation(&floor_turn);
 			floor.append_translation(&MAZE_FLOOR);
@@ -534,11 +595,9 @@ fn add_maze(
 	}
 
 	ceiling_group.set_texture_with_name("ceiling");
-	ceiling_group.set_material_with_name("pixel");
 	wall_group.set_texture_with_name("wall");
-	wall_group.set_material_with_name("pixel");
 	floor_group.set_texture_with_name("floor");
-	floor_group.set_material_with_name("pixel");
+	group.set_material_with_name("pixel");
 	group.set_color(r, g, b);
 
 	(
@@ -550,5 +609,6 @@ fn add_maze(
 			item.append_translation(&item_translation.unwrap());
 			(item, ic.2)
 		}),
+		monsters,
 	)
 }
