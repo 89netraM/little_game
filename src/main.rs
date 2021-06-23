@@ -16,7 +16,7 @@ use self::{
 	textures::init_textures,
 };
 
-pub const GAME_NAME: &str = "Lazer aMAZEing";
+pub const GAME_NAME: &str = "Little Maze";
 
 fn main() {
 	let mut window = Window::new_with_size(GAME_NAME, 1280, 800);

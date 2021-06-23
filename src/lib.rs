@@ -18,7 +18,7 @@ use self::{
 	textures::init_textures,
 };
 
-pub const GAME_NAME: &str = "Lazer aMAZEing";
+pub const GAME_NAME: &str = "Little Maze";
 
 #[wasm_bindgen(start)]
 pub fn main() {
