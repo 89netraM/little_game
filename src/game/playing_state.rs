@@ -228,14 +228,18 @@ impl InnerGameState for PlayingState {
 				}) < MAZE_SIZE_HALF
 				{
 					let lmb_pressed = mouse_buttons.lmb == MouseAction::Pressed;
-					if kind == &ItemKind::Lock && self.has_key {
-						if lmb_pressed {
-							return Some(Box::new(super::EndState::new(
-								window,
-								self.collected_items.len() - self.has_key as usize,
-							)));
+					if kind == &ItemKind::Lock {
+						if self.has_key {
+							if lmb_pressed {
+								return Some(Box::new(super::EndState::new(
+									window,
+									self.collected_items.len() - self.has_key as usize,
+								)));
+							} else {
+								action_text = Some("Press LMB to unlock and escape");
+							}
 						} else {
-							action_text = Some("Press LMB to unlock and escape");
+							action_text = Some("Come back here once you've found the key to escape");
 						}
 					} else if kind == &ItemKind::Key {
 						if lmb_pressed {
